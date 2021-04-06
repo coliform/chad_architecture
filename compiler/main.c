@@ -4,7 +4,7 @@
 *
 */
 
-#define DEBUG 0
+#define DEBUG 1
 
 #include <stdio.h>
 #include <string.h>
@@ -475,6 +475,7 @@ int compile(char** lines, char** lines_memory) {
 		fprintf(fptr, "%s\n", line);
 		free(line);
 	}
+	fprintf(fptr, "100000000000\n");
 	fclose(fptr);
 
 	free(instructions);
