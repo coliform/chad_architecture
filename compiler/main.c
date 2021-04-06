@@ -37,8 +37,8 @@ typedef struct t_instruction {
 	unsigned char rs;		// 4 bits	35:32
 	unsigned char rt;		// 4 bits	31:28
 	unsigned char reserved;		// 4 bits	27:24
-	int immediate1;	// 12 bits	23:12
-	int immediate2;	// 12 bits	11:0
+	unsigned int immediate1;	// 12 bits	23:12
+	unsigned int immediate2;	// 12 bits	11:0
 } instruction;
 
 typedef struct t_label {
@@ -113,6 +113,7 @@ bool is_whitespace(char c) { return c==' '||c=='\t'; }
 
 bool char_to_unsigned_int(char* in, unsigned int* out) {
 	// returns 1 if error, 0 if ok
+	bool negative = false;
 	char* p = in;
 	*out = 0;
 	if (p[0] != 0 && p[1] != 1 && (p[1] == 'x' || p[1] == 'X') ) {
@@ -122,16 +123,21 @@ bool char_to_unsigned_int(char* in, unsigned int* out) {
 			*out *= 16;
 			if (*p >= '0' && *p >= '9') *out += (*p) - ((unsigned int)'0');
 			else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((unsigned int)'A');
-			else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned int)'A');
+			else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned int)'a');
 			else return 1;
 		}
 	} else {
 		// dec
+		if (*p=='-') {
+			negative = true;
+			p++;
+		}
 		for (; *p >= '0' && *p <= '9'; p++) {
 			*out *= 10;
 			*out += (*p) - ((unsigned int)'0');
 		}
 	}
+	if (negative) *out *= -1;
 	return 0;
 }
 
@@ -147,7 +153,7 @@ bool char_to_int(char* in, int* out) {
 			*out *= 16;
 			if (*p >= '0' && *p >= '9') *out += (*p) - ((int)'0');
 			else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((int)'A');
-			else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((int)'A');
+			else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((int)'a');
 			else return 1;
 		}
 	} else {
@@ -230,7 +236,7 @@ unsigned int* memtext_to_uint_arr(char** lines) {
 
 bool immediate_to_int(char* in, unsigned int* out, label* labels, int labels_count) {
 	int i, pos, len, label_len;
-	if ((in[0] >= '0' && in[0] <= '9') || in[0]=='-') return char_to_int(in, out);
+	if ((in[0] >= '0' && in[0] <= '9') || in[0]=='-') return char_to_unsigned_int(in, out);
 	len = strlen(in);
 
 	for (i=0; i<labels_count; i++) {
@@ -240,7 +246,8 @@ bool immediate_to_int(char* in, unsigned int* out, label* labels, int labels_cou
 			if (labels[i].name[pos] != in[pos]) pos=label_len+10;
 		}
 		if (pos==label_len) {
-			*out = i;
+			printf("identilabel %s\n", in);
+			*out = labels[i].pointer;
 			return 0;
 		}
 	}
@@ -249,8 +256,9 @@ bool immediate_to_int(char* in, unsigned int* out, label* labels, int labels_cou
 
 char string_to_opcode(char* in) {
 	int i;
-	int in_hash = hash(in);
+	unsigned long in_hash = hash(in);
 	for (i=0; i<=19; i++) {
+		//printf("comparing '%s' to '%s' with result %d iff %llu==%llu\n", in, STR_OPCODES[i], in_hash==HASH_OPCODES[i], hash(in), HASH_OPCODES[i]);
 		if (in_hash==HASH_OPCODES[i]) return (char)i;
 	}
 	return -1;	
@@ -341,6 +349,7 @@ char* split_pop(char* line, char delimiter, int index) {
 
 char* unsigned_long_long_to_hex(unsigned long long number) {
 	char* result;
+	//printf("i got %llu\n", number);
 	unsigned long long backup;
 	int hex_count,i;
 
@@ -351,6 +360,7 @@ char* unsigned_long_long_to_hex(unsigned long long number) {
 	for (backup=number, i=11; backup>0; backup>>=4, i--) {
 		//printf("backup&15=%llu and %llu\n",backup&15, backup);
 		result[i] = CHARSET_HEX[backup&((unsigned long long)15)];
+		//printf("result is %s\n", result);
 	}
 	//printf("%llu\t%d, %s <-> ", number, i, result);
 	result[hex_count]=0;
@@ -361,15 +371,25 @@ char* unsigned_int_to_hex(unsigned int number) {
 	return unsigned_long_long_to_hex((unsigned long long) number);
 }
 
+
+
 unsigned long long instruction_to_unsigned_long_long(instruction ins) {
+	char* conv;
 	unsigned long long number = 0;
 	number += ((unsigned long long)ins.opcode)<<40;
 	number += ((unsigned long long)ins.rd)<<36;
+	//printf("imm1 %d, imm2 is %d\n", ins.immediate1, ins.immediate2);
 	number += ((unsigned long long)ins.rs)<<32;
 	number += ((unsigned long long)ins.rt)<<28;
 	number += 0	<<24;
-	number += ((unsigned long long)ins.immediate1)<<12;
-	number += ((unsigned long long)ins.immediate2)<<0;
+	//printf("converting\n");
+	//conv = unsigned_long_long_to_hex(((unsigned long long)ins.immediate1)<<12);
+	//printf("so far1: %d\n", number);
+	number += ((unsigned long long)(ins.immediate1&0xFFF))<<12;
+		//conv = unsigned_long_long_to_hex(((unsigned long long)(ins.immediate2&8)));
+	//printf("so far2: %d\n", number);
+	number += ((unsigned long long)(ins.immediate2&0xFFF))<<0;
+	//debug_print("number is %d\n", ins.opcode);
 	return number;
 }
 
@@ -425,7 +445,6 @@ int compile(char** lines, char** lines_memory) {
 		}
 	}
 	//exit(1);
-	dotwords_c = 0;
 	pc = 0; // we only increase pc for regular instructions
 	for (i=0; i<len_lines; i++) {
 		line = lines[i];
@@ -441,8 +460,8 @@ int compile(char** lines, char** lines_memory) {
 			immediate2 = split_pop(line, ' ', 5);
 			immediate1 = split_pop(line, ' ', 4);
 			rt = split_pop(line, ' ', 3);
-			rd = split_pop(line, ' ', 2);
-			rs = split_pop(line, ' ', 1);
+			rs = split_pop(line, ' ', 2);
+			rd = split_pop(line, ' ', 1);
 			opcode = split_pop(line, ' ', 0);
 			instructions[pc].rt = string_to_register(rt);
 			instructions[pc].rs = string_to_register(rs);
@@ -455,6 +474,7 @@ int compile(char** lines, char** lines_memory) {
 				instructions[pc].rs == -1 || instructions[pc].opcode == -1 ||
 				immediate_to_int(immediate2, &instructions[pc].immediate2, labels, labels_c) ||
 				immediate_to_int(immediate1, &instructions[pc].immediate1, labels, labels_c)) throw_error(ERROR_COMPILE_TIME, line);
+			printf("we haveaaa %d\n", instructions[pc].immediate2);
 			free(immediate2);
 			free(immediate1);
 			free(rt);
@@ -466,7 +486,13 @@ int compile(char** lines, char** lines_memory) {
 	}
 
 	if ((fptr = fopen("dmemin.txt", "w"))==NULL) return ERROR_FILE_ACCESS;
-	for (i = 0; i < dotwords_c; i++) fprintf(fptr, "%x\n", dotwords[i]);
+	for (i = 0; i < MAX_DMEM_ITEMS; i++) {
+		if (dotwords[i]==0) fprintf(fptr, "000000000000\n");
+		else {
+			printf("we are at %d with %d and %s\n", i, dotwords[i], unsigned_int_to_hex(dotwords[i]));
+			fprintf(fptr, "%s\n", unsigned_int_to_hex(dotwords[i]));
+		}
+	}
 	fclose(fptr);
 
 	if ((fptr = fopen("imemin.txt", "w"))==NULL) return ERROR_FILE_ACCESS;
@@ -475,7 +501,6 @@ int compile(char** lines, char** lines_memory) {
 		fprintf(fptr, "%s\n", line);
 		free(line);
 	}
-	fprintf(fptr, "100000000000\n");
 	fclose(fptr);
 
 	free(instructions);
@@ -542,5 +567,6 @@ int main(int argc, char *argv[]) {
 
 	free_lines(lines_program);
 	free_lines(lines_mem);
+	printf("halt needs %llu\n", hash("halt"));
 	return 0;
 }
