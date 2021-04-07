@@ -24,8 +24,35 @@ char* STR_IOREGISTERS[23] = {
 };
 
 
-void chad_utils_test() {
-	printf("hello\n");
+long get_file_size(FILE *f) {
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	return fsize;
+}
+
+char* get_file_str(char* path) {
+	FILE* f;
+	long fsize;
+	char* s;
+	int i;
+
+	if ((f = fopen(path, "r"))==NULL) throw_error(ERROR_FILE_ACCESS, path);
+	fsize = get_file_size(f);
+	s = malloc(fsize + 1);
+	fread(s, 1, fsize, f);
+	fclose(f);
+	s[fsize] = 0;
+	return s;
+}
+
+char** get_lines(char* path) {
+	char* raw;
+	char** result;
+	raw = get_file_str(path);
+	result = split(raw,'\n');
+	free(raw);
+	return result;
 }
 
 void throw_error(const int reason, const char* details) {
@@ -39,6 +66,10 @@ void throw_error(const int reason, const char* details) {
 		case ERROR_PARAMETERS:
 			printf("Format is as following:\n");
 			printf("%s <program path> <memory path>\n", details);
+			break;
+		case ERROR_PARAMETERS_SIM:
+			printf("Simulator format is as following:\n");
+			printf("%s <imemin.txt> <dmemin.txt> <diskin.txt> <irq2in.txt>\n");
 			break;
 		default:
 			printf("An unknown error (code %d) has occurred!\nDetails:%s\n", reason, details);

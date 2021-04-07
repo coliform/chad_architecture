@@ -24,9 +24,6 @@ char* unsigned_int_to_hex(unsigned int number);
 unsigned long long instruction_to_unsigned_long_long(instruction ins);
 char* instruction_to_hex(instruction ins);
 int compile(char** lines, char** lines_memory);
-long get_file_size(FILE *f);
-char* get_file_str(char* path);
-char** get_lines(char* path);
 
 //int main(int argc, char *argv[]);
 

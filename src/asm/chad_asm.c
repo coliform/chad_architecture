@@ -276,40 +276,8 @@ int compile(char** lines, char** lines_memory) {
 	return COMPILED_SUCCESSFULLY;
 }
 
-long get_file_size(FILE *f) {
-	fseek(f, 0, SEEK_END);
-	long fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);
-	return fsize;
-}
-
-char* get_file_str(char* path) {
-	FILE* f;
-	long fsize;
-	char* s;
-	int i;
-
-	if ((f = fopen(path, "r"))==NULL) throw_error(ERROR_FILE_ACCESS, path);
-	fsize = get_file_size(f);
-	s = malloc(fsize + 1);
-	fread(s, 1, fsize, f);
-	fclose(f);
-	s[fsize] = 0;
-	return s;
-}
-
-char** get_lines(char* path) {
-	char* raw;
-	char** result;
-	raw = get_file_str(path);
-	result = split(raw,'\n');
-	free(raw);
-	return result;
-}
-
 
 int main(int argc, char *argv[]) {
-	chad_utils_test();
 	char** lines_program;
 	char** lines_mem;
 

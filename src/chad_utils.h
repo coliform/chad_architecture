@@ -4,10 +4,13 @@
 #define DEBUG 1
 
 
+
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+
+#define uint4_t		unsigned char
 
 #define MAX_SIZE_PC		4096
 #define MAX_SIZE_LINE		500
@@ -20,6 +23,7 @@
 #define ERROR_FILE_ACCESS	-1000
 #define ERROR_COMPILE_TIME	-2000
 #define ERROR_PARAMETERS	-3000
+#define ERROR_PARAMETERS_SIM	-3001
 #define ERROR_UNKNOWN_OPCODE	-4000
 #define ERROR_UNKNOWN_REGISTER -5000
 #define COMPILED_SUCCESSFULLY	-10000
@@ -51,30 +55,6 @@ typedef struct t_dotword {
 	unsigned int value;
 } dotword;
 
-
-/*const char CHARSET_HEX[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-
-const char* STR_OPCODES[20] = {
-	"add","sub","and","or","sll","sra",
-	"srl","beq","bne","blt","bgt","ble",
-	"bge","jal","lw","sw","reti","in",
-	"out","halt"
-};
-
-const char* STR_REGISTERS[16] = {
-	"zero","imm1","imm2","v0","a0","a1",
-	"a2","t0","t1","t2","s0","s1",
-	"s2","gp","sp","ra"
-};
-
-const char* STR_IOREGISTERS[23] = {
-	"irq0enable","irq1enable","irq2enable","irq0status",
-	"irq1status","irq2status","irqhandler","irqreturn",
-	"clks","leds","display","timerenable","timercurrent",
-	"timermax","diskcmd","disksector","diskbuffer","diskstatus",
-	"reserved","reserved","monitoraddr","monitordata","monitorcmd"
-};*/
-
 extern char CHARSET_HEX[16];
 extern char* STR_OPCODES[20];
 extern char* STR_REGISTERS[16];
@@ -94,6 +74,9 @@ char** split(char* s, char del);
 void free_lines(char** lines);
 void pop_char(char* line, int index);
 unsigned int* memtext_to_uint_arr(char** lines);
+long get_file_size(FILE *f);
+char* get_file_str(char* path);
+char** get_lines(char* path);
 
 
 #endif

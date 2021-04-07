@@ -23,9 +23,18 @@ test_asm:
 	-make asm
 	-$(OUT)/asm $(TESTDIR)/fib/fib.asm
 	-if diff -q --strip-trailing-cr imemin.txt $(TESTDIR)/fib/imemin.txt; then echo "Equal"; else echo "Neq"; fi
+	-rm -rf imemin.txt; true
+	-rm -rf dmemin.txt; true
+
+test_sim:
+	-make sim
+	-$(OUT)/sim $(TESTDIR)/fib/imemin.txt $(TESTDIR)/fib/dmemin.txt $(TESTDIR)/fib/diskin.txt $(TESTDIR)/fib/irq2in.txt
+#	-if diff -q --strip-trailing-cr imemin.txt $(TESTDIR)/fib/imemin.txt; then echo "Equal"; else echo "Neq"; fi
+	-rm -rf imemin.txt; true
+	-rm -rf dmemin.txt; true
 
 move_objects:
-	-mv *.o $(ODIR)
-	-mv $(SRC)/*.o $(ODIR)
-	-mv $(SRC)/asm/*.o $(ODIR)
-	-mv $(SRC)/sim/*.o $(ODIR)
+	-mv -f *.o $(ODIR) 2>/dev/null; true
+	-mv -f $(SRC)/*.o $(ODIR) 2>/dev/null; true
+	-mv -f $(SRC)/asm/*.o $(ODIR) 2>/dev/null; true
+	-mv -f $(SRC)/sim/*.o $(ODIR) 2>/dev/null; true
