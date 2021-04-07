@@ -64,9 +64,9 @@ unsigned long HASH_OPCODES[20];
 unsigned long HASH_REGISTERS[16];
 unsigned long HASH_IOREGISTERS[23];
 
-void chad_utils_test();
 void throw_error(const int reason, const char* details);
 bool is_whitespace(char c);
+bool hex_to_unsigned_int(char* in, unsigned int* out);
 bool char_to_unsigned_int(char* in, unsigned int* out);
 int count_occ(char* line, char c);
 unsigned long hash(unsigned char *str);
@@ -76,7 +76,7 @@ void pop_char(char* line, int index);
 unsigned int* memtext_to_uint_arr(char** lines);
 long get_file_size(FILE *f);
 char* get_file_str(char* path);
-char** get_lines(char* path);
+int get_lines(char* path, char*** lines);
 
 
 #endif

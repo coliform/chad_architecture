@@ -280,6 +280,7 @@ int compile(char** lines, char** lines_memory) {
 int main(int argc, char *argv[]) {
 	char** lines_program;
 	char** lines_mem;
+	int count_program, count_mem;
 
 	int i=0;
 	for(i=0;i<20;i++) HASH_OPCODES[i]=hash(STR_OPCODES[i]);
@@ -293,8 +294,8 @@ int main(int argc, char *argv[]) {
 		return 1;*/
 	}
 
-	lines_program = get_lines(argv[1]);
-	if (argc==3) lines_mem = get_lines(argv[2]);
+	count_program = get_lines(argv[1], &lines_program);
+	if (argc==3) count_mem = get_lines(argv[2], &lines_mem);
 	else lines_mem = split("", '\n');
 
 	compile(lines_program, lines_mem);

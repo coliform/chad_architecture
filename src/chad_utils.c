@@ -24,6 +24,16 @@ char* STR_IOREGISTERS[23] = {
 };
 
 
+void strip(char* in) {
+	for (char* p = in; *p != '\0'; p++) {
+		if (*p == '\n' || *p == '\r') {
+			*p = '\0';
+			return;
+		}
+	}
+}
+
+
 long get_file_size(FILE *f) {
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
@@ -46,13 +56,12 @@ char* get_file_str(char* path) {
 	return s;
 }
 
-char** get_lines(char* path) {
+int get_lines(char* path, char*** result) {
 	char* raw;
-	char** result;
 	raw = get_file_str(path);
-	result = split(raw,'\n');
+	*result = split(raw,'\n');
 	free(raw);
-	return result;
+	return 3;
 }
 
 void throw_error(const int reason, const char* details) {
@@ -69,7 +78,7 @@ void throw_error(const int reason, const char* details) {
 			break;
 		case ERROR_PARAMETERS_SIM:
 			printf("Simulator format is as following:\n");
-			printf("%s <imemin.txt> <dmemin.txt> <diskin.txt> <irq2in.txt>\n");
+			printf("%s <imemin.txt> <dmemin.txt> <diskin.txt> <irq2in.txt>\n", details);
 			break;
 		default:
 			printf("An unknown error (code %d) has occurred!\nDetails:%s\n", reason, details);
@@ -80,21 +89,27 @@ void throw_error(const int reason, const char* details) {
 
 bool is_whitespace(char c) { return c==' '||c=='\t'; }
 
+bool hex_to_unsigned_int(char* in, unsigned int* out) {
+	char* p = in;
+	*out = 0;
+	for (; *p != '\0'; p++) {
+		*out *= 16;
+		if (*p >= '0' && *p >= '9') *out += (*p) - ((unsigned int)'0');
+		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((unsigned int)'A');
+		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned int)'a');
+		else return 1;
+	}
+}
+
 bool char_to_unsigned_int(char* in, unsigned int* out) {
 	// returns 1 if error, 0 if ok
 	bool negative = false;
 	char* p = in;
 	*out = 0;
-	if (p[0] != 0 && p[1] != 1 && (p[1] == 'x' || p[1] == 'X') ) {
+	if (p[0] != 0 && p[1] != 0 && (p[1] == 'x' || p[1] == 'X') ) {
 		// hex
 		p += 2; // skip 0x
-		for (; *p != '\0' && *p != ','; p++) {
-			*out *= 16;
-			if (*p >= '0' && *p >= '9') *out += (*p) - ((unsigned int)'0');
-			else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((unsigned int)'A');
-			else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned int)'a');
-			else return 1;
-		}
+		hex_to_unsigned_int(in, out);
 	} else {
 		// dec
 		if (*p=='-') {
