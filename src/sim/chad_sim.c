@@ -108,6 +108,7 @@ uint32 memory_read(int number) {
 
 void ioregister_write(int number, uint32 value) {
 	if (number < 0 || number >= COUNT_IOREGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN IO REGISTER WRITE");
+	IORegister[number] = value & IORegister_SIZE[number];
 }
 
 uint32 ioregister_read(int number) {
@@ -115,6 +116,13 @@ uint32 ioregister_read(int number) {
 	return IORegister[number];
 }
 
+
+/*
+*
+* *** OPCODES ***
+* The functions below contain the opcodes
+*
+*/
 
 void add(int rd, int rs, int rt) {
 	register_write(rd, register_read(rs)+register_read(rt));
@@ -170,7 +178,7 @@ void bge(int rd, int rs, int rt) {
 }
 
 void jal(int rd, int rs, int rt) {
-	register_write(15, pc+1);
+	register_write(ra, pc+1);
 	pc = register_read(rd) & 0x00000FFF;
 }
 
@@ -183,7 +191,7 @@ void sw(int rd, int rs, int rt) {
 }
 
 void reti(int rd, int rs, int rt) {
-	pc = ioregister_read(7);
+	pc = ioregister_read(irqreturn);
 }
 
 void in(int rd, int rs, int rt) {
@@ -198,26 +206,38 @@ void halt(int rd, int rs, int rt) {
 	exit(0);
 }
 
-
-
 void (*opcode_fn[COUNT_OPCODES])(int, int, int) = {
 	add, sub, and, or, sll, sra, beq, bne, blt, bgt, ble, bge, jal, lw, sw, reti, in, out, halt
 };
 
+/*
+*
+* *** OPCODES END ***
+*
+*/
+
+
+/* Perform current instruction:
+* Performs the instruction at pc
+*/
 void perform_current_instruction() {
 	instruction ins = instructions[pc];
 	if (ins.opcode < 0 || ins.opcode >= COUNT_OPCODES) throw_error(ERROR_RUNTIME, "INVALID OPCODE");
 	if (ins.rd < 0 || ins.rd > COUNT_REGISTERS
 		|| ins.rs < 0 || ins.rs > COUNT_REGISTERS
 		|| ins.rt < 0 || ins.rt > COUNT_REGISTERS) throw_error(ERROR_RUNTIME, "INVALID REGISTER");
-	R[1] = ins.immediate1;
-	R[2] = ins.immediate2;
+	R[imm1] = ins.immediate1;
+	R[imm2] = ins.immediate2;
 	(*opcode_fn[ins.opcode])(ins.rd, ins.rs, ins.rt);
 	pc++;
 }
 
 void perform_instruction_loop() {
-	int irq;
+	int i, irq;
+	
+	for (i=0; i<COUNT_REGISTERS; i++) R[i] = 0;
+	for (i=0; i<COUNT_IOREGISTERS; i++) IORegister[i] = 0;
+	for (i=0; i<MAX_DMEM_ITEMS; i++) MEM[i] = 0;
 	
 	pc = 0;
 	cycles = 0;
@@ -232,7 +252,7 @@ void perform_instruction_loop() {
 			perform_current_instruction();
 		}
 		// TODO halt, trace, etc
-		cycles++;
+		IORegister[clks]++;
 	}
 }
 
