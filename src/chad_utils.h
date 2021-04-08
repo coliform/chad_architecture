@@ -36,7 +36,11 @@
 #define ERROR_UNKNOWN_OPCODE	-4000
 #define ERROR_UNKNOWN_REGISTER -5000
 #define COMPILED_SUCCESSFULLY	-10000
+#define ERROR_RUNTIME		-6000
 #define CHAR_COMMENT		'#'
+#define COUNT_REGISTERS	16
+#define COUNT_IOREGISTERS	23
+#define COUNT_OPCODES		20
 
 #define debug_print(fmt, ...) \
 	do { if (DEBUG) fprintf(stderr, fmt, __VA_ARGS__); } while(0)
@@ -65,19 +69,20 @@ typedef struct t_dotword {
 } dotword;
 
 extern char CHARSET_HEX[16];
-extern char* STR_OPCODES[20];
-extern char* STR_REGISTERS[16];
-extern char* STR_IOREGISTERS[23];
+extern char* STR_OPCODES[COUNT_OPCODES];
+extern char* STR_REGISTERS[COUNT_REGISTERS];
+extern char* STR_IOREGISTERS[COUNT_IOREGISTERS];
 
-unsigned long HASH_OPCODES[20];
-unsigned long HASH_REGISTERS[16];
-unsigned long HASH_IOREGISTERS[23];
+unsigned long HASH_OPCODES[COUNT_OPCODES];
+unsigned long HASH_REGISTERS[COUNT_REGISTERS];
+unsigned long HASH_IOREGISTERS[COUNT_IOREGISTERS];
 
 void throw_error(const int reason, const char* details);
 void strip(char* in);
 bool is_whitespace(char c);
 bool hex_to_unsigned_int(char* in, unsigned int* out);
 bool hex_to_unsigned_long_long(char* in, unsigned long long* out);
+bool hex_to_uint32(char* in, uint32* out);
 bool char_to_unsigned_int(char* in, unsigned int* out);
 int count_occ(char* line, char c);
 unsigned long hash(unsigned char *str);
