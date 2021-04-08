@@ -28,10 +28,10 @@ test_asm:
 
 test_sim:
 	-make sim
-	-$(OUT)/sim $(TESTDIR)/fib/imemin.txt $(TESTDIR)/fib/dmemin.txt $(TESTDIR)/fib/diskin.txt $(TESTDIR)/fib/irq2in.txt
+	-$(OUT)/sim $(TESTDIR)/fib/imemin.txt $(TESTDIR)/fib/dmemin.txt $(TESTDIR)/fib/diskin.txt $(TESTDIR)/fib/irq2in.txt drafts/dmemout.txt drafts/regout.txt drafts/trace.txt drafts/hwregtrace.txt drafts/cycles.txt drafts/leds.txt drafts/display7seg.txt drafts/diskout.txt drafts/monitor.txt drafts/monitor.yuv
 #	-if diff -q --strip-trailing-cr imemin.txt $(TESTDIR)/fib/imemin.txt; then echo "Equal"; else echo "Neq"; fi
-	-rm -rf imemin.txt; true
-	-rm -rf dmemin.txt; true
+#	-rm -rf imemin.txt; true
+#	-rm -rf dmemin.txt; true
 
 move_objects:
 	-mv -f *.o $(ODIR) 2>/dev/null; true

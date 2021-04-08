@@ -13,6 +13,10 @@ int instruction_count, sector_count;
 FILE *f_dmemout, *f_regout, *f_trace, *f_hwregtrace, *f_cycles, *f_leds, *f_display7seg, *f_diskout, *f_monitor, *f_monitoryuv;
 bool irq0, irq1, irq2, irq, irq_routine;
 
+#if DEBUG==1
+char* opcode_names[COUNT_OPCODES]={"add", "sub", "and", "or", "sll", "sra", "srl", "beq", "bne", "blt", "bgt", "ble", "bge", "jal", "lw", "sw", "reti", "in", "out", "halt"};
+#endif
+
 
 uint32 pc;
 uint32 R[COUNT_REGISTERS];
@@ -78,18 +82,26 @@ void read_dmemin(char** lines) {
 
 void parse_irq2in_line(char* line, int index) {
 	// TODO: maybe sort
-	hex_to_uint32(line, &irq2in_feed[index]);
+	hex_to_uint32(line, &(irq2in_feed[index]));
 }
 
 void read_irq2in(char** lines) {
 	int i, counted;
+	
+	for (i=0, counted=0; lines[i]!=0; i++) {
+		strip(lines[i]);
+		if (strlen(lines[i])==0) continue;
+		counted++;
+	}
+	irq2in_i = 0;
+	irq2in_count = counted;
+	irq2in_feed = malloc((irq2in_count)*sizeof(uint32));
+	
 	for (i=0, counted=0; lines[i]!=0; i++) {
 		if (strlen(lines[i])==0) continue;
 		parse_irq2in_line(lines[i], counted);
 		counted++;
 	}
-	irq2in_i = 0;
-	irq2in_count = counted;
 }
 
 void write_leds() {
@@ -259,7 +271,7 @@ void halt(int rd, int rs, int rt) {
 }
 
 void (*opcode_fn[COUNT_OPCODES])(int, int, int) = {
-	add, sub, and, or, sll, sra, beq, bne, blt, bgt, ble, bge, jal, lw, sw, reti, in, out, halt
+	add, sub, and, or, sll, sra, srl, beq, bne, blt, bgt, ble, bge, jal, lw, sw, reti, in, out, halt
 };
 
 /*
@@ -281,6 +293,7 @@ void perform_current_instruction() {
 
 	R[imm1] = ins.immediate1;
 	R[imm2] = ins.immediate2;
+	printf("Performing instruction '%s' with opcode %d\n", opcode_names[ins.opcode], ins.opcode);
 	(*opcode_fn[ins.opcode])(ins.rd, ins.rs, ins.rt);
 	pc++;
 }
@@ -350,11 +363,13 @@ void perform_instruction_loop() {
 	IORegister[irq2enable] = 1;
 	IORegister[timerenable] = 1;
 	
+	printf("Instruction count = %d\n", instruction_count);
 	pc = 0;
 	while (0 <= pc && pc < instruction_count) {
 		check_interrupts();
 		perform_current_instruction();
 		clock_tick();
+		printf("alright pc is at %d\n", pc);
 	}
 }
 
@@ -379,19 +394,20 @@ int main(int argc, char *argv[]) {
 	free_lines(diskin_text);
 	
 	get_file_lines(argv[4], &irq2in_text);
-	read_disk(diskin_text);
-	free_lines(diskin_text);
+	read_irq2in(irq2in_text);
+	free_lines(irq2in_text);
 	
-	if ((f_dmemout = fopen(argv[5], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[5]);
-	if ((f_regout = fopen(argv[6], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[6]);
-	if ((f_trace = fopen(argv[7], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[7]);
-	if ((f_hwregtrace = fopen(argv[8], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[8]);
-	if ((f_cycles = fopen(argv[9], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[9]);
-	if ((f_leds = fopen(argv[10], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[10]);
-	if ((f_display7seg = fopen(argv[11], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[11]);
-	if ((f_diskout = fopen(argv[12], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[12]);
-	if ((f_monitor = fopen(argv[13], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[13]);
-	if ((f_monitoryuv = fopen(argv[14], "r"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[14]);
+
+	if ((f_dmemout = fopen(argv[5], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[5]);
+	if ((f_regout = fopen(argv[6], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[6]);
+	if ((f_trace = fopen(argv[7], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[7]);
+	if ((f_hwregtrace = fopen(argv[8], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[8]);
+	if ((f_cycles = fopen(argv[9], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[9]);
+	if ((f_leds = fopen(argv[10], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[10]);
+	if ((f_display7seg = fopen(argv[11], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[11]);
+	if ((f_diskout = fopen(argv[12], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[12]);
+	if ((f_monitor = fopen(argv[13], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[13]);
+	if ((f_monitoryuv = fopen(argv[14], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[14]);
 	
 	perform_instruction_loop();
 	
