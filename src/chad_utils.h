@@ -85,6 +85,7 @@ bool hex_to_unsigned_int(char* in, unsigned int* out);
 bool hex_to_unsigned_long_long(char* in, unsigned long long* out);
 bool hex_to_uint32(char* in, uint32* out);
 char* unsigned_long_long_to_hex(unsigned long long number);
+char* llu_to_hex(llu number, int min_width);
 char* unsigned_int_to_hex(unsigned int number);
 bool char_to_unsigned_int(char* in, unsigned int* out);
 int count_occ(char* line, char c);

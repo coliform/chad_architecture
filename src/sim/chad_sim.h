@@ -6,6 +6,10 @@
 #define SIZE_HDD_SECTORS_H		128
 #define SIZE_HDD_SECTORS_W		512
 
+#define SIZE_MONITOR_H			256
+#define SIZE_MONITOR_W			256
+#define SIZE_MONITOR	SIZE_MONITOR_H*SIZE_MONITOR_W
+
 #define zero		0
 #define imm1		1
 #define imm2		2

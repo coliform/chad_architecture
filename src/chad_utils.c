@@ -148,6 +148,26 @@ char* unsigned_long_long_to_hex(unsigned long long number) {
 	return result;
 }
 
+char* llu_to_hex(llu number, int min_width) {
+	char* result;
+	//printf("i got %llu\n", number);
+	unsigned long long backup;
+	int hex_count,i;
+
+	result=malloc((min_width+1)*sizeof(char));
+	for (i=0; i<min_width; i++) result[i]='0';
+	result[min_width]=0;
+	backup=number;
+	for (backup=number, i=min_width-1; backup>0, i>=0; backup>>=4, i--) {
+		//printf("backup&15=%llu and %llu\n",backup&15, backup);
+		result[i] = CHARSET_HEX[backup&((unsigned long long)15)];
+		//printf("result is %s\n", result);
+	}
+	//printf("%llu\t%d, %s <-> ", number, i, result);
+	result[hex_count]=0;
+	return result;
+}
+
 char* unsigned_int_to_hex(unsigned int number) {
 	return unsigned_long_long_to_hex((unsigned long long) number);
 }

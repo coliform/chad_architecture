@@ -25,8 +25,10 @@ uint32 IORegister_SIZE_OUT[COUNT_IOREGISTERS] = {
 };
 uint32 MEM[MAX_DMEM_ITEMS];
 uint8 disk[SIZE_HDD_SECTORS_H][SIZE_HDD_SECTORS_W];
+uint8 monitor[SIZE_MONITOR_H*SIZE_MONITOR_W];
 uint32 irq2in_i, irq2in_count;
 uint32 *irq2in_feed;
+int irq1_i;
 
 void parse_instruction(char* line, int index) {
 	llu binary;
@@ -90,10 +92,30 @@ void read_irq2in(char** lines) {
 	irq2in_count = counted;
 }
 
-void write_leds(uint32 value) {
+void write_leds() {
+	uint32 value = IORegister[leds];
 	char* hex = unsigned_long_long_to_hex((llu)value);
 	fprintf(f_leds, "%d %s\n", IORegister[clks], hex);
 	free(hex);
+}
+
+void print_monitor_to_file() {
+	int i;
+	char* hex;
+	for (i=0; i<SIZE_MONITOR; i++) {
+		hex = llu_to_hex((llu)monitor[i], 2);
+		fprintf(f_monitor, "%s\n", hex);
+		free(hex);
+	}
+}
+
+void write_monitor() {
+	uint32 addr, data;
+	if (!IORegister[monitorcmd]) return;
+	addr = IORegister[monitoraddr];
+	data = IORegister[monitordata];
+	monitor[addr] = data;
+	print_monitor_to_file();
 }
 
 // register_write:
@@ -126,8 +148,10 @@ void ioregister_write(int number, uint32 value) {
 	IORegister[number] = value & IORegister_SIZE_OUT[number];
 	switch (number) {
 		case leds:
-			write_leds(value);
+			write_leds();
 			break;
+		case monitorcmd:
+			write_monitor();
 		default:
 			break;
 	}
