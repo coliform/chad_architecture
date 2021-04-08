@@ -19,8 +19,6 @@ bool is_label(char* line);
 bool is_dotword(char* line);
 void sanitize_line(char* line);
 char* split_pop(char* line, char delimiter, int index);
-char* unsigned_long_long_to_hex(unsigned long long number);
-char* unsigned_int_to_hex(unsigned int number);
 unsigned long long instruction_to_unsigned_long_long(instruction ins);
 char* instruction_to_hex(instruction ins);
 int compile(char** lines, char** lines_memory);

@@ -120,30 +120,6 @@ char* split_pop(char* line, char delimiter, int index) {
 	return out;
 }
 
-char* unsigned_long_long_to_hex(unsigned long long number) {
-	char* result;
-	//printf("i got %llu\n", number);
-	unsigned long long backup;
-	int hex_count,i;
-
-	result=malloc((12+1)*sizeof(char));
-	for (i=0; i<12; i++) result[i]='0';
-	result[12]=0;
-	backup=number;
-	for (backup=number, i=11; backup>0; backup>>=4, i--) {
-		//printf("backup&15=%llu and %llu\n",backup&15, backup);
-		result[i] = CHARSET_HEX[backup&((unsigned long long)15)];
-		//printf("result is %s\n", result);
-	}
-	//printf("%llu\t%d, %s <-> ", number, i, result);
-	result[hex_count]=0;
-	return result;
-}
-
-char* unsigned_int_to_hex(unsigned int number) {
-	return unsigned_long_long_to_hex((unsigned long long) number);
-}
-
 
 
 unsigned long long instruction_to_unsigned_long_long(instruction ins) {
