@@ -104,16 +104,17 @@ bool hex_to_unsigned_int(char* in, unsigned int* out) {
 	}
 }
 
-bool hex_to_unsigned_long_long(char* in, unsigned long long* out) {
+bool hex_to_unsigned_long_long(char* in, llu* out) {
 	char* p = in;
 	*out = 0;
 	for (; *p != '\0'; p++) {
-		*out *= 16;
-		if (*p >= '0' && *p <= '9') *out += (*p) - ((unsigned long long)'0');
-		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((unsigned long long)'A');
-		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned long long)'a');
+		*out <<= 4;
+		if (*p >= '0' && *p <= '9') *out += (llu)(*p - '0');
+		else if (*p >= 'A' && *p <= 'F') *out += (llu)(*p - 'A'+10);
+		else if (*p >= 'a' && *p <= 'f') *out += (llu)(*p - 'a'+10);
 		else return 1;
 	}
+//	printf("%s -> %llu\n", in, *out);
 }
 
 bool hex_to_uint32(char* in, uint32* out) {

@@ -51,6 +51,7 @@ void read_instructions(char** lines) {
 	for (i=0, counted=0; lines[i]!=0; i++) {
 		if (strlen(lines[i])==0) continue;
 		parse_instruction(lines[i], counted);
+		printf("%s -> \"%s\" (%d) at %d\n", lines[i], opcode_names[instructions[counted].opcode], instructions[counted].opcode, counted);
 		counted++;
 	}
 	instruction_count = counted;
@@ -293,7 +294,7 @@ void perform_current_instruction() {
 
 	R[imm1] = ins.immediate1;
 	R[imm2] = ins.immediate2;
-	printf("Performing instruction '%s' with opcode %d\n", opcode_names[ins.opcode], ins.opcode);
+	printf("%d > Performing instruction '%s' with opcode %d\n", IORegister[clks], opcode_names[ins.opcode], ins.opcode);
 	(*opcode_fn[ins.opcode])(ins.rd, ins.rs, ins.rt);
 	pc++;
 }
@@ -366,10 +367,10 @@ void perform_instruction_loop() {
 	printf("Instruction count = %d\n", instruction_count);
 	pc = 0;
 	while (0 <= pc && pc < instruction_count) {
+		printf("alright pc is at %d\n", pc);
 		check_interrupts();
 		perform_current_instruction();
 		clock_tick();
-		printf("alright pc is at %d\n", pc);
 	}
 }
 
@@ -378,6 +379,13 @@ int main(int argc, char *argv[]) {
 	// %s <imemin.txt> <dmemin.txt> <diskin.txt> <irq2in.txt>
 	int i;
 	char **instructions_text, **dmemin_text, **diskin_text, **irq2in_text;
+	
+/*	llu fifi;
+	hex_to_unsigned_long_long("0E4020000040", &fifi);
+	printf("%llu\n", fifi);
+	fifi = 0;
+	fifi 
+	exit(0);*/
 	
 	if (argc != 15) throw_error(ERROR_PARAMETERS_SIM, argv[0]); // god help me
 	
