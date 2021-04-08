@@ -35,15 +35,18 @@ uint8 monitordata;
 bool monitorcmd;
 //IO registers end
 
-uint8 disk[SIZE_HDD_SECTORS_H][SIZE_HDD_SECTORS_W];
+uint64 disk[SIZE_HDD_SECTORS_H][SIZE_HDD_SECTORS_W];
 
-void parse_instruction(char* line, int count) {
-	llu instruction_binary;
+void parse_instruction(char* line, int index) {
+	llu binary;
 	strip(line);
-	printf("Line %s and ", line);
-	instruction_binary = hex_to_unsigned_long_long(line, &instruction_binary);
-	printf("\n");
-	//printf("%llu\n", instruction_binary);
+	hex_to_unsigned_long_long(line, &binary);
+	instructions[index].opcode 		= (binary>>40)&0xFF;
+	instructions[index].rd			= (binary>>32)&0xF;
+	instructions[index].rs			= (binary>>28)&0xF;
+	instructions[index].rt			= (binary>>24)&0xF;
+	instructions[index].immediate1	= (binary>>12)&0xFFF;
+	instructions[index].immediate2	= (binary>>0 )&0xFFF;
 }
 
 void read_instructions(char** lines) {
@@ -54,6 +57,10 @@ void read_instructions(char** lines) {
 		counted++;
 	}
 	instruction_count = counted;
+}
+
+void parse_disk(char* line, int index) {
+	
 }
 
 

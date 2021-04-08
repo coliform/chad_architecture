@@ -112,7 +112,6 @@ bool hex_to_unsigned_long_long(char* in, unsigned long long* out) {
 		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned long long)'a');
 		else return 1;
 	}
-	printf("\n");
 }
 
 bool char_to_unsigned_int(char* in, unsigned int* out) {

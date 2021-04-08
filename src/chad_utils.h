@@ -18,6 +18,7 @@
 #define uint12			u_int16_t
 #define uint16			u_int16_t
 #define uint32			u_int32_t
+#define uint64			u_int64_t
 #define llu			unsigned long long
 
 #define MAX_SIZE_PC		4096
