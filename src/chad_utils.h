@@ -10,16 +10,17 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#define uint1			bool
-#define uint2			unsigned char
-#define uint4			unsigned char
-#define uint7			u_int8_t
-#define uint8			u_int8_t
-#define uint12			u_int16_t
-#define uint16			u_int16_t
-#define uint32			u_int32_t
-#define uint64			u_int64_t
-#define llu			unsigned long long
+typedef bool			uint1;
+typedef unsigned char		uint2;
+typedef unsigned char		uint4;
+typedef u_int8_t		uint7;
+typedef u_int8_t		uint8;
+typedef u_int16_t		uint12;
+typedef u_int16_t		uint16;
+typedef u_int16_t		uint16;
+typedef u_int32_t		uint32;
+typedef u_int64_t		uint64;
+typedef unsigned long long	llu;
 
 #define MAX_SIZE_PC		4096
 #define MAX_SIZE_LINE		500

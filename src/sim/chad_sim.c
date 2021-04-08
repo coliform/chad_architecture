@@ -17,7 +17,7 @@ uint32 R[COUNT_REGISTERS];
 uint32 IORegister[COUNT_IOREGISTERS];
 uint32 IORegister_SIZE[COUNT_IOREGISTERS] = {
 	0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000FFF, 0x00000FFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000001, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000003, 0x0000007F, 0x00000FFF, 0x00000001, 0x00000000, 0x00000000, 0x0000FFFF, 0x000000FF, 0x00000001
-}
+};
 uint32 MEM[MAX_DMEM_ITEMS];
 uint8 disk[SIZE_HDD_SECTORS_H][SIZE_HDD_SECTORS_W];
 
@@ -241,14 +241,14 @@ void perform_instruction_loop() {
 	
 	pc = 0;
 	cycles = 0;
-	while (0 <= pc && pc < instructions_count) {
+	while (0 <= pc && pc < instruction_count) {
 		irq = (IORegister[irq0enable] & IORegister[irq0status]) 
 			| (IORegister[irq1enable] & IORegister[irq1status])
 			| (IORegister[irq2enable] & IORegister[irq2status]);
 		if (irq) {
 			// TODO
 		} else {
-			if (instructions
+			// TODO
 			perform_current_instruction();
 		}
 		// TODO halt, trace, etc
