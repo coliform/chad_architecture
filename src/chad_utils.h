@@ -10,7 +10,15 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#define uint4_t		unsigned char
+#define uint1			bool
+#define uint2			unsigned char
+#define uint4			unsigned char
+#define uint7			u_int8_t
+#define uint8			u_int8_t
+#define uint12			u_int16_t
+#define uint16			u_int16_t
+#define uint32			u_int32_t
+#define llu			unsigned long long
 
 #define MAX_SIZE_PC		4096
 #define MAX_SIZE_LINE		500
@@ -65,18 +73,20 @@ unsigned long HASH_REGISTERS[16];
 unsigned long HASH_IOREGISTERS[23];
 
 void throw_error(const int reason, const char* details);
+void strip(char* in);
 bool is_whitespace(char c);
 bool hex_to_unsigned_int(char* in, unsigned int* out);
+bool hex_to_unsigned_long_long(char* in, unsigned long long* out);
 bool char_to_unsigned_int(char* in, unsigned int* out);
 int count_occ(char* line, char c);
 unsigned long hash(unsigned char *str);
-char** split(char* s, char del);
+int split(char* s, char del, char*** result);
 void free_lines(char** lines);
 void pop_char(char* line, int index);
 unsigned int* memtext_to_uint_arr(char** lines);
 long get_file_size(FILE *f);
 char* get_file_str(char* path);
-int get_lines(char* path, char*** lines);
+int get_file_lines(char* path, char*** lines);
 
 
 #endif

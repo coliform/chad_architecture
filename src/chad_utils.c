@@ -56,12 +56,13 @@ char* get_file_str(char* path) {
 	return s;
 }
 
-int get_lines(char* path, char*** result) {
+int get_file_lines(char* path, char*** result) {
+	int lines_count;
 	char* raw;
 	raw = get_file_str(path);
-	*result = split(raw,'\n');
+	lines_count = split(raw,'\n', result);
 	free(raw);
-	return 3;
+	return lines_count;
 }
 
 void throw_error(const int reason, const char* details) {
@@ -94,11 +95,24 @@ bool hex_to_unsigned_int(char* in, unsigned int* out) {
 	*out = 0;
 	for (; *p != '\0'; p++) {
 		*out *= 16;
-		if (*p >= '0' && *p >= '9') *out += (*p) - ((unsigned int)'0');
+		if (*p >= '0' && *p <= '9') *out += (*p) - ((unsigned int)'0');
 		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((unsigned int)'A');
 		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned int)'a');
 		else return 1;
 	}
+}
+
+bool hex_to_unsigned_long_long(char* in, unsigned long long* out) {
+	char* p = in;
+	*out = 0;
+	for (; *p != '\0'; p++) {
+		*out *= 16;
+		if (*p >= '0' && *p <= '9') *out += (*p) - ((unsigned long long)'0');
+		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((unsigned long long)'A');
+		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned long long)'a');
+		else return 1;
+	}
+	printf("\n");
 }
 
 bool char_to_unsigned_int(char* in, unsigned int* out) {
@@ -136,30 +150,29 @@ int count_occ(char* line, char c) {
 	return occ;
 }
 
-char** split(char* s, char del) {
-	char** out;
+int split(char* s, char del, char*** out) {
 	char* p;
 	int s_len, out_len;
 	int i, j, last_del, out_pos;
 
 	out_len = count_occ(s, del)+1;
-	out = malloc((out_len+1)*sizeof(char*));
-	out[out_len] = 0;
+	*out = malloc((out_len+1)*sizeof(char*));
+	(*out)[out_len] = 0;
 
 	s_len = strlen(s);
 	last_del = -1;
 	out_pos = 0;
 	for (i = 0; i <= s_len; i++) {
 		if (s[i]==del || s[i]==0) {
-			out[out_pos] = malloc((i-last_del)*sizeof(char));
-			out[out_pos][i-(last_del+1)] = 0;
-			for (j=i-1; j>last_del; j--) out[out_pos][j-(last_del+1)] = s[j];
+			(*out)[out_pos] = malloc((i-last_del)*sizeof(char));
+			(*out)[out_pos][i-(last_del+1)] = 0;
+			for (j=i-1; j>last_del; j--) (*out)[out_pos][j-(last_del+1)] = s[j];
 			out_pos++;
 			last_del = i;
 		}
 	}
 
-	return out;
+	return out_len;
 }
 
 void free_lines(char** lines) {

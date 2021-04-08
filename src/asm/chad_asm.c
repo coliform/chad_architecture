@@ -109,7 +109,7 @@ char* split_pop(char* line, char delimiter, int index) {
 	char** lines;
 	int i,j;
 	if (index<0) return NULL;
-	lines = split(line, delimiter);
+	split(line, delimiter, &lines);
 	for(i=0; i<index && lines[i]; i++);
 	if (i==index) {
 		out = malloc((strlen(lines[i])+1)*sizeof(char));
@@ -294,9 +294,9 @@ int main(int argc, char *argv[]) {
 		return 1;*/
 	}
 
-	count_program = get_lines(argv[1], &lines_program);
-	if (argc==3) count_mem = get_lines(argv[2], &lines_mem);
-	else lines_mem = split("", '\n');
+	count_program = get_file_lines(argv[1], &lines_program);
+	if (argc==3) count_mem = get_file_lines(argv[2], &lines_mem);
+	else count_mem = split("", '\n', &lines_mem);
 
 	compile(lines_program, lines_mem);
 
