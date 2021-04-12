@@ -39,11 +39,12 @@ void parse_instruction(char* line, int index) {
 	strip(line);
 	hex_to_unsigned_long_long(line, &binary);
 	instructions[index].opcode 		= (binary>>40)&0xFF;
-	instructions[index].rd			= (binary>>32)&0xF;
-	instructions[index].rs			= (binary>>28)&0xF;
-	instructions[index].rt			= (binary>>24)&0xF;
+	instructions[index].rd			= (binary>>36)&0xF;
+	instructions[index].rs			= (binary>>32)&0xF;
+	instructions[index].rt			= (binary>>28)&0xF;
 	instructions[index].immediate1	= (binary>>12)&0xFFF;
 	instructions[index].immediate2	= (binary>>0 )&0xFFF;
+			printf("ins.rd = %x\n", (unsigned int)((binary>>36)&0xF));
 }
 
 void read_instructions(char** lines) {
@@ -51,8 +52,9 @@ void read_instructions(char** lines) {
 	for (i=0, counted=0; lines[i]!=0; i++) {
 		if (strlen(lines[i])==0) continue;
 		parse_instruction(lines[i], counted);
-		printf("%s -> \"%s\" (%d) at %d\n", lines[i], opcode_names[instructions[counted].opcode], instructions[counted].opcode, counted);
+		printf("%s, -> (%d)\t%s %d %d %d %d %d\n", lines[i], counted, opcode_names[instructions[counted].opcode], instructions[counted].rd, instructions[counted].rs, instructions[counted].rt, instructions[counted].immediate1, instructions[counted].immediate2);
 		counted++;
+		//if (counted >= 5) exit(0);
 	}
 	instruction_count = counted;
 }
@@ -134,7 +136,7 @@ void write_monitor() {
 // register_write:
 // safely writes into a register, crashes if register is invalid
 void register_write(int number, uint32 value) {
-	if (number < 0 || number >= COUNT_REGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN REGISTER WRITE");
+	if (number < 0 || number >= COUNT_REGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN REGISTER WRITE, INVALID REGISTER");
 	if (number == 0 || number == 1 || number == 2) return;
 	R[number] = value;
 }
@@ -142,22 +144,22 @@ void register_write(int number, uint32 value) {
 // register_read:
 // safely reads from a register, crashes if register is invalid
 uint32 register_read(int number) {
-	if (number < 0 || number >= COUNT_REGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN REGISTER READ");
+	if (number < 0 || number >= COUNT_REGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN REGISTER READ, INVALID REGISTER");
 	return R[number];
 }
 
 void memory_write(int number, uint32 value) {
-	if (number < 0 || number >= MAX_DMEM_ITEMS) throw_error(ERROR_RUNTIME, "EXCEPTION IN MEMORY WRITE");
+	if (number < 0 || number >= MAX_DMEM_ITEMS) throw_error(ERROR_RUNTIME, "EXCEPTION IN MEMORY WRITE, INVALID MEMORY ADDRESS");
 	MEM[number] = value;
 }
 
 uint32 memory_read(int number) {
-	if (number < 0 || number >= MAX_DMEM_ITEMS) throw_error(ERROR_RUNTIME, "EXCEPTION IN MEMORY READ");
+	if (number < 0 || number >= MAX_DMEM_ITEMS) throw_error(ERROR_RUNTIME, "EXCEPTION IN MEMORY READ, INVALID MEMORY ADDRESS");
 	return MEM[number];
 }
 
 void ioregister_write(int number, uint32 value) {
-	if (number < 0 || number >= COUNT_IOREGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN IO REGISTER WRITE");
+	if (number < 0 || number >= COUNT_IOREGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN IO REGISTER WRITE, INVALID IOREGISTER");
 	IORegister[number] = value & IORegister_SIZE_OUT[number];
 	switch (number) {
 		case leds:
@@ -171,7 +173,7 @@ void ioregister_write(int number, uint32 value) {
 }
 
 uint32 ioregister_read(int number) {
-	if (number < 0 || number >= COUNT_IOREGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN IO REGISTER READ");
+	if (number < 0 || number >= COUNT_IOREGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN IO REGISTER READ, INVALID IOREGISTER");
 	return IORegister[number] & IORegister_SIZE_IN[number];
 }
 
@@ -243,6 +245,7 @@ void bge(int rd, int rs, int rt) {
 
 void jal(int rd, int rs, int rt) {
 	register_write(ra, pc+1);
+	printf("set pc from jal to %d\n",rd);
 	pc = register_read(rd) & 0x00000FFF;
 }
 
@@ -294,7 +297,8 @@ void perform_current_instruction() {
 
 	R[imm1] = ins.immediate1;
 	R[imm2] = ins.immediate2;
-	printf("%d > Performing instruction '%s' with opcode %d\n", IORegister[clks], opcode_names[ins.opcode], ins.opcode);
+	printf("%d > (%d) Performing instruction '%s' with opcode %d\n", IORegister[clks], pc, opcode_names[ins.opcode], ins.opcode);
+	printf("R[%d]=%d, R[%d]=%d, extra=%d\n", imm1, ins.immediate1, imm2, ins.immediate2, ins.rd);
 	(*opcode_fn[ins.opcode])(ins.rd, ins.rs, ins.rt);
 	pc++;
 }
@@ -364,13 +368,12 @@ void perform_instruction_loop() {
 	IORegister[irq2enable] = 1;
 	IORegister[timerenable] = 1;
 	
-	printf("Instruction count = %d\n", instruction_count);
 	pc = 0;
 	while (0 <= pc && pc < instruction_count) {
-		printf("alright pc is at %d\n", pc);
 		check_interrupts();
 		perform_current_instruction();
 		clock_tick();
+		//if (IORegister[clks] >= 10) exit(0);
 	}
 }
 

@@ -78,8 +78,12 @@ void throw_error(const int reason, const char* details) {
 			printf("%s <program path> <memory path>\n", details);
 			break;
 		case ERROR_PARAMETERS_SIM:
-			printf("Simulator format is as following:\n");
+			printf("Format is as following:\n");
 			printf("%s <imemin.txt> <dmemin.txt> <diskin.txt> <irq2in.txt>\n", details);
+			break;
+		case ERROR_RUNTIME:
+			printf("Simulator crashed. Details are as following:\n");
+			printf("%s\n", details);
 			break;
 		default:
 			printf("An unknown error (code %d) has occurred!\nDetails:%s\n", reason, details);
