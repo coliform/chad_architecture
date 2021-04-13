@@ -12,5 +12,9 @@ int main(int argc, char *argv[]) {
 	pad_left(&bibi, '0', 12);
 	printf("%s\n", bibi);
 	free(bibi);
+	int t1, t2;
+	t1 = 2;
+	t2 = 1 << 31;
+	printf("%d\n", t2+t1);
 	return SUCCESS;
 }

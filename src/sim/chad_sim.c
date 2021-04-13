@@ -16,6 +16,7 @@ bool irq0, irq1, irq2, irq, irq_routine;
 
 #if DEBUG==1
 char* opcode_names[COUNT_OPCODES]={"add", "sub", "and", "or", "sll", "sra", "srl", "beq", "bne", "blt", "bgt", "ble", "bge", "jal", "lw", "sw", "reti", "in", "out", "halt"};
+char* register_names[COUNT_REGISTERS]={"zero", "imm1", "imm2", "v0", "a0", "a1", "a2", "t0", "t1", "t2", "s0", "s1", "s2", "gp", "sp", "ra"};
 #endif
 
 
@@ -54,6 +55,7 @@ except(const char* details) {
 }
 
 void parse_instruction(char* line, int index) {
+	int i1, i2;
 	llu binary;
 	strip(line);
 	hex_to_unsigned_long_long(line, &binary);
@@ -61,8 +63,20 @@ void parse_instruction(char* line, int index) {
 	instructions[index].rd			= (binary>>36)&0xF;
 	instructions[index].rs			= (binary>>32)&0xF;
 	instructions[index].rt			= (binary>>28)&0xF;
-	instructions[index].immediate1	= (binary>>12)&0xFFF;
-	instructions[index].immediate2	= (binary>>0 )&0xFFF;
+	i1					= (binary>>12)&0xFFF;
+	i2					= (binary>>0 )&0xFFF;
+	// extend 12 -> 32 bits
+	i1 = (i1 >> 11) == 0 ? i1 : -1 ^ 0xFFF | i1;
+	i2 = (i2 >> 11) == 0 ? i2 : -1 ^ 0xFFF | i2;
+	instructions[index].immediate1 = i1;
+	instructions[index].immediate2 = i2;
+	/*int sign1, sign2;
+	sign1 = (1<<11)&instructions[index].immediate1;
+	sign2 = (1<<11)&instructions[index].immediate2;
+	instructions[index].immediate1 &= (~sign1);
+	instructions[index].immediate1 |= (sign1 >> 11) << 31;
+	instructions[index].immediate2 &= (~sign2);
+	instructions[index].immediate2 |= (sign2 >> 11) << 31;*/
 			printf("ins.rd = %x\n", (unsigned int)((binary>>36)&0xF));
 }
 
@@ -97,7 +111,6 @@ void read_dmemin(char** lines) {
 	for (i=0, counted=0; lines[i]!=0; i++) {
 		if (strlen(lines[i])==0) continue;
 		hex_to_uint32(lines[i], &MEM[counted]);
-		printf("MEM[%d]=%d\n",counted,MEM[counted]);
 		counted++;
 	}
 	instruction_count = counted;
@@ -169,7 +182,6 @@ uint32 register_read(int number) {
 }
 
 void memory_write(int number, uint32 value) {
-	printf("number is %d\n", number);
 	if (number < 0 || number >= MAX_DMEM_ITEMS) except("EXCEPTION IN MEMORY WRITE, INVALID MEMORY ADDRESS");
 	MEM[number] = value;
 }
@@ -320,8 +332,7 @@ void perform_current_instruction() {
 
 	R[imm1] = ins.immediate1;
 	R[imm2] = ins.immediate2;
-	printf("%d > (%d) Performing instruction '%s' with opcode %d\n", IORegister[clks], pc, opcode_names[ins.opcode], ins.opcode);
-	printf("R[%d]=%d, R[%d]=%d, extra=%d\n", imm1, ins.immediate1, imm2, ins.immediate2, ins.rd);
+	printf("%s $%s, $%s, $%s, %d, %d\n", opcode_names[instructions[pc].opcode], opcode_names[instructions[pc].rd], opcode_names[instructions[pc].rs], opcode_names[instructions[pc].rt], instructions[pc].immediate1, instructions[pc].immediate2);
 	(*opcode_fn[ins.opcode])(ins.rd, ins.rs, ins.rt);
 	pc++;
 }

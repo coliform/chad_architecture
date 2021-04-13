@@ -33,6 +33,13 @@ test_sim:
 #	-rm -rf imemin.txt; true
 #	-rm -rf dmemin.txt; true
 
+test_sim_valgrind:
+	-make sim
+	-valgrind --leak-check=full --track-origins=yes $(OUT)/sim $(TESTDIR)/fib/imemin.txt $(TESTDIR)/fib/dmemin.txt $(TESTDIR)/fib/diskin.txt $(TESTDIR)/fib/irq2in.txt drafts/dmemout.txt drafts/regout.txt drafts/trace.txt drafts/hwregtrace.txt drafts/cycles.txt drafts/leds.txt drafts/display7seg.txt drafts/diskout.txt drafts/monitor.txt drafts/monitor.yuv
+#	-if diff -q --strip-trailing-cr imemin.txt $(TESTDIR)/fib/imemin.txt; then echo "Equal"; else echo "Neq"; fi
+#	-rm -rf imemin.txt; true
+#	-rm -rf dmemin.txt; true
+
 test: $(SRC)/chad_utils.o $(SRC)/chad_test.o
 	$(CC) -o $(OUT)/test $(SRC)/chad_utils.o $(SRC)/chad_test.o
 	-make move_objects

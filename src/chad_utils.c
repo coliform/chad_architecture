@@ -62,7 +62,7 @@ char* get_file_str(char* path) {
 }
 
 int get_file_lines(char* path, char*** result) {
-	int lines_count;
+	int lines_count, i;
 	char* raw;
 	raw = get_file_str(path);
 	lines_count = split(raw,'\n', result);
@@ -104,8 +104,8 @@ bool is_whitespace(char c) { return c==' '||c=='\t'; }
 bool hex_to_unsigned_int(char* in, unsigned int* out) {
 	char* p = in;
 	*out = 0;
-	for (; *p != '\0'; p++) {
-		*out *= 16;
+	for (; *p != '\0' && *p != '\r'; p++) {
+		*out <<= 4;
 		if (*p >= '0' && *p <= '9') *out += (*p) - ((unsigned int)'0');
 		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((unsigned int)'A');
 		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned int)'a');
@@ -116,20 +116,19 @@ bool hex_to_unsigned_int(char* in, unsigned int* out) {
 bool hex_to_unsigned_long_long(char* in, llu* out) {
 	char* p = in;
 	*out = 0;
-	for (; *p != '\0'; p++) {
+	for (; *p != '\0' && *p != '\r'; p++) {
 		*out <<= 4;
 		if (*p >= '0' && *p <= '9') *out += (llu)(*p - '0');
 		else if (*p >= 'A' && *p <= 'F') *out += (llu)(*p - 'A'+10);
 		else if (*p >= 'a' && *p <= 'f') *out += (llu)(*p - 'a'+10);
 		else return 1;
 	}
-//	printf("%s -> %llu\n", in, *out);
 }
 
 bool hex_to_uint32(char* in, uint32* out) {
 	char* p = in;
 	*out = 0;
-	for (; *p != '\0'; p++) {
+	for (; *p != '\0' && *p != '\r'; p++) {
 		*out <<= 4;
 		if (*p >= '0' && *p <= '9') *out += (*p) - ((uint32)'0');
 		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((uint32)'A');
