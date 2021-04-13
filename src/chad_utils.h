@@ -106,6 +106,7 @@ bool add_chars_left(char** in, char c, int count);
 bool add_chars_right(char** in, char c, int count);
 bool pad_right(char** in, char c, int min_size);
 bool pad_left(char** in, char c, int min_size);
+int atoi_custom(char* in);
 
 
 #endif

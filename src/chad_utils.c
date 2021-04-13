@@ -344,3 +344,17 @@ unsigned long hash(unsigned char *str)
 
     return hash;
 }
+
+int atoi_custom(char* in) {
+	int val, len, i;
+	len=strlen(in);
+	val=0;
+	for (i=0;i<len;i++) {
+		val += in[i]-'0';
+		val *= 10;
+	}
+	val /= 10;
+	printf("got val %d\n", val);
+	//exit(0);
+	return val;
+}

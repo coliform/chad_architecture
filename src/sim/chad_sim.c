@@ -15,18 +15,6 @@ int instruction_count, sector_count;
 FILE *f_dmemout, *f_regout, *f_trace, *f_hwregtrace, *f_cycles, *f_leds, *f_display7seg, *f_diskout, *f_monitor, *f_monitoryuv;
 bool irq0, irq1, irq2, irq, irq_routine;
 
-#if DEBUG==1
-char* opcode_names[COUNT_OPCODES]={"add", "sub", "and", "or", "sll", "sra", "srl", "beq", "bne", "blt", "bgt", "ble", "bge", "jal", "lw", "sw", "reti", "in", "out", "halt"};
-char* register_names[COUNT_REGISTERS]={"zero", "imm1", "imm2", "v0", "a0", "a1", "a2", "t0", "t1", "t2", "s0", "s1", "s2", "gp", "sp", "ra"};
-
-void press_enter() {
-	char ch;
-	printf("Press 0 to stop: ");
-	scanf("%c",&ch);
-	if (ch == '0') pc = instruction_count;
-}
-#endif
-
 
 uint32 R[COUNT_REGISTERS];
 uint32 IORegister[COUNT_IOREGISTERS];
@@ -43,10 +31,31 @@ uint32 irq2in_i, irq2in_count;
 uint32 *irq2in_feed;
 int irq1_i;
 
+#if DEBUG==1
+char* opcode_names[COUNT_OPCODES]={"add", "sub", "and", "or", "sll", "sra", "srl", "beq", "bne", "blt", "bgt", "ble", "bge", "jal", "lw", "sw", "reti", "in", "out", "halt"};
+char* register_names[COUNT_REGISTERS]={"zero", "imm1", "imm2", "v0", "a0", "a1", "a2", "t0", "t1", "t2", "s0", "s1", "s2", "gp", "sp", "ra"};
+
+void print_registers() {
+	int i;
+	
+	for (i = 0; i < COUNT_REGISTERS; i++) {
+		printf("%s=%d, ", register_names[i], R[i]);
+	}
+	printf("\r\n");
+}
+
+void press_enter() {
+	char ch;
+	printf("Press 0 to stop: ");
+	scanf("%c",&ch);
+	if (ch == '0') pc = instruction_count;
+}
+#endif
+
 void write_trace() {
 	fprintf(f_trace, "%d", pc);
 	fprintf(f_trace, "\t");
-	fprintf(f_trace, "%d", instructions[pc].opcode);
+	fprintf(f_trace, "%s", opcode_names[instructions[pc].opcode]);
 	for (int i=0; i<COUNT_REGISTERS; i++) {
 		fprintf(f_trace, "\t");
 		fprintf(f_trace, "%d", R[i]);
@@ -126,7 +135,8 @@ void read_dmemin(char** lines) {
 
 void parse_irq2in_line(char* line, int index) {
 	// TODO: maybe sort
-	hex_to_uint32(line, &(irq2in_feed[index]));
+	//hex_to_uint32(line, &(irq2in_feed[index]));
+	irq2in_feed[index] = atoi_custom(line)+1;
 }
 
 void read_irq2in(char** lines) {
@@ -146,6 +156,11 @@ void read_irq2in(char** lines) {
 		parse_irq2in_line(lines[i], counted);
 		counted++;
 	}
+	
+	for (i=0; i<counted; i++) {
+		printf("%d\n", irq2in_feed[i]);
+	}
+	//exit(0);
 }
 
 void write_leds() {
@@ -340,6 +355,7 @@ void perform_current_instruction() {
 
 	R[imm1] = ins.immediate1;
 	R[imm2] = ins.immediate2;
+	write_trace();
 	printf("%s $%s, $%s, $%s, %d, %d\n", opcode_names[instructions[pc].opcode], register_names[instructions[pc].rd], register_names[instructions[pc].rs], register_names[instructions[pc].rt], instructions[pc].immediate1, instructions[pc].immediate2);
 	(*opcode_fn[ins.opcode])(ins.rd, ins.rs, ins.rt);
 	pc++;
@@ -377,6 +393,10 @@ void check_interrupt_2() {
 	}
 	irq2 = IORegister[irq2enable] & IORegister[irq2status];
 	irq |= irq2;
+	if (irq2) {
+		printf("caught irq2\n");
+		//exit(0);
+	}
 }
 
 void check_interrupts() {
@@ -384,6 +404,7 @@ void check_interrupts() {
 	check_interrupt_0();
 	check_interrupt_1();
 	check_interrupt_2();
+	printf("%d %d %d\n", irq0, irq1, irq2);
 	if (irq == 1) {
 		if (irq_routine) {
 			return;
@@ -405,18 +426,15 @@ void perform_instruction_loop() {
 	
 	for (i=0; i<COUNT_REGISTERS; i++) R[i] = 0;
 	for (i=0; i<COUNT_IOREGISTERS; i++) IORegister[i] = 0;
-	IORegister[irq0enable] = 1;
-	IORegister[irq1enable] = 1;
-	IORegister[irq2enable] = 1;
-	IORegister[timerenable] = 1;
 	
 	pc = 0;
 	while (0 <= pc && pc < instruction_count) {
-		write_trace();
 		check_interrupts();
 		perform_current_instruction();
 		clock_tick();
 		//if (IORegister[clks] >= 10) exit(0);
+		print_registers();
+		printf("Cycle %d, ", IORegister[clks]-1);
 		//press_enter();
 	}
 }
