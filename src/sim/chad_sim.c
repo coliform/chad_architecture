@@ -8,6 +8,7 @@
 
 
 // program metadata
+uint32 pc;
 instruction instructions[MAX_SIZE_PC];
 char **instructions_text;
 int instruction_count, sector_count;
@@ -17,10 +18,16 @@ bool irq0, irq1, irq2, irq, irq_routine;
 #if DEBUG==1
 char* opcode_names[COUNT_OPCODES]={"add", "sub", "and", "or", "sll", "sra", "srl", "beq", "bne", "blt", "bgt", "ble", "bge", "jal", "lw", "sw", "reti", "in", "out", "halt"};
 char* register_names[COUNT_REGISTERS]={"zero", "imm1", "imm2", "v0", "a0", "a1", "a2", "t0", "t1", "t2", "s0", "s1", "s2", "gp", "sp", "ra"};
+
+void press_enter() {
+	char ch;
+	printf("Press 0 to stop: ");
+	scanf("%c",&ch);
+	if (ch == '0') pc = instruction_count;
+}
 #endif
 
 
-uint32 pc;
 uint32 R[COUNT_REGISTERS];
 uint32 IORegister[COUNT_IOREGISTERS];
 uint32 IORegister_SIZE_IN[COUNT_IOREGISTERS] = {
@@ -114,6 +121,7 @@ void read_dmemin(char** lines) {
 		counted++;
 	}
 	instruction_count = counted;
+		printf("MEM[64]=%d\n",MEM[64]);
 }
 
 void parse_irq2in_line(char* line, int index) {
@@ -254,33 +262,33 @@ void srl(int rd, int rs, int rt) {
 }
 
 void beq(int rd, int rs, int rt) {
-	if (register_read(rs)==register_read(rt)) pc = register_read(rd) & 0x00000FFF;
+	if (register_read(rs)==register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
 }
 
 void bne(int rd, int rs, int rt) {
-	if (register_read(rs)!=register_read(rt)) pc = register_read(rd) & 0x00000FFF;
+	if (register_read(rs)!=register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
 }
 
 void blt(int rd, int rs, int rt) {
-	if (register_read(rs)<register_read(rt)) pc = register_read(rd) & 0x00000FFF;
+	if (register_read(rs)<register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
 }
 
 void bgt(int rd, int rs, int rt) {
-	if (register_read(rs)>register_read(rt)) pc = register_read(rd) & 0x00000FFF;
+	if (register_read(rs)>register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
 }
 
 void ble(int rd, int rs, int rt) {
-	if (register_read(rs)<=register_read(rt)) pc = register_read(rd) & 0x00000FFF;
+	if (register_read(rs)<=register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
 }
 
 void bge(int rd, int rs, int rt) {
-	if (register_read(rs)>=register_read(rt)) pc = register_read(rd) & 0x00000FFF;
+	if (register_read(rs)>=register_read(rt)) (pc = register_read(rd) & 0x00000FFF)-1;
 }
 
 void jal(int rd, int rs, int rt) {
 	register_write(ra, pc+1);
 	printf("set pc from jal to %d\n",register_read(rd));
-	pc = (register_read(rd) & 0x00000FFF) - 1;
+	pc = (register_read(rd) & 0x00000FFF)-1;
 //	printf("instruction there is %s\n", opcode_names[instructions[pc].opcode]);
 }
 
@@ -293,7 +301,7 @@ void sw(int rd, int rs, int rt) {
 }
 
 void reti(int rd, int rs, int rt) {
-	pc = ioregister_read(irqreturn);
+	pc = ioregister_read(irqreturn)-1;
 	irq_routine = 0;
 }
 
@@ -332,7 +340,7 @@ void perform_current_instruction() {
 
 	R[imm1] = ins.immediate1;
 	R[imm2] = ins.immediate2;
-	printf("%s $%s, $%s, $%s, %d, %d\n", opcode_names[instructions[pc].opcode], opcode_names[instructions[pc].rd], opcode_names[instructions[pc].rs], opcode_names[instructions[pc].rt], instructions[pc].immediate1, instructions[pc].immediate2);
+	printf("%s $%s, $%s, $%s, %d, %d\n", opcode_names[instructions[pc].opcode], register_names[instructions[pc].rd], register_names[instructions[pc].rs], register_names[instructions[pc].rt], instructions[pc].immediate1, instructions[pc].immediate2);
 	(*opcode_fn[ins.opcode])(ins.rd, ins.rs, ins.rt);
 	pc++;
 }
@@ -397,7 +405,6 @@ void perform_instruction_loop() {
 	
 	for (i=0; i<COUNT_REGISTERS; i++) R[i] = 0;
 	for (i=0; i<COUNT_IOREGISTERS; i++) IORegister[i] = 0;
-	for (i=0; i<MAX_DMEM_ITEMS; i++) MEM[i] = 0;
 	IORegister[irq0enable] = 1;
 	IORegister[irq1enable] = 1;
 	IORegister[irq2enable] = 1;
@@ -410,6 +417,7 @@ void perform_instruction_loop() {
 		perform_current_instruction();
 		clock_tick();
 		//if (IORegister[clks] >= 10) exit(0);
+		//press_enter();
 	}
 }
 
