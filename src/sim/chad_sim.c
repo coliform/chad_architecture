@@ -9,6 +9,7 @@
 
 // program metadata
 instruction instructions[MAX_SIZE_PC];
+char **instructions_text;
 int instruction_count, sector_count;
 FILE *f_dmemout, *f_regout, *f_trace, *f_hwregtrace, *f_cycles, *f_leds, *f_display7seg, *f_diskout, *f_monitor, *f_monitoryuv;
 bool irq0, irq1, irq2, irq, irq_routine;
@@ -33,6 +34,24 @@ uint8 monitor[SIZE_MONITOR_H*SIZE_MONITOR_W];
 uint32 irq2in_i, irq2in_count;
 uint32 *irq2in_feed;
 int irq1_i;
+
+void write_trace() {
+	fprintf(f_trace, "%d", pc);
+	fprintf(f_trace, "\t");
+	fprintf(f_trace, "%d", instructions[pc].opcode);
+	for (int i=0; i<COUNT_REGISTERS; i++) {
+		fprintf(f_trace, "\t");
+		fprintf(f_trace, "%d", R[i]);
+	}
+	fprintf(f_trace, "\n");
+}
+
+except(const char* details) {
+	printf("Simulator crashed. PC=%d\n", pc);
+	printf("%s\n", details);
+	fclose(f_trace);
+	exit(1);
+}
 
 void parse_instruction(char* line, int index) {
 	llu binary;
@@ -78,6 +97,7 @@ void read_dmemin(char** lines) {
 	for (i=0, counted=0; lines[i]!=0; i++) {
 		if (strlen(lines[i])==0) continue;
 		hex_to_uint32(lines[i], &MEM[counted]);
+		printf("MEM[%d]=%d\n",counted,MEM[counted]);
 		counted++;
 	}
 	instruction_count = counted;
@@ -136,7 +156,7 @@ void write_monitor() {
 // register_write:
 // safely writes into a register, crashes if register is invalid
 void register_write(int number, uint32 value) {
-	if (number < 0 || number >= COUNT_REGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN REGISTER WRITE, INVALID REGISTER");
+	if (number < 0 || number >= COUNT_REGISTERS) except("EXCEPTION IN REGISTER WRITE, INVALID REGISTER");
 	if (number == 0 || number == 1 || number == 2) return;
 	R[number] = value;
 }
@@ -144,22 +164,24 @@ void register_write(int number, uint32 value) {
 // register_read:
 // safely reads from a register, crashes if register is invalid
 uint32 register_read(int number) {
-	if (number < 0 || number >= COUNT_REGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN REGISTER READ, INVALID REGISTER");
+	if (number < 0 || number >= COUNT_REGISTERS) except("EXCEPTION IN REGISTER READ, INVALID REGISTER");
 	return R[number];
 }
 
 void memory_write(int number, uint32 value) {
-	if (number < 0 || number >= MAX_DMEM_ITEMS) throw_error(ERROR_RUNTIME, "EXCEPTION IN MEMORY WRITE, INVALID MEMORY ADDRESS");
+	printf("number is %d\n", number);
+	if (number < 0 || number >= MAX_DMEM_ITEMS) except("EXCEPTION IN MEMORY WRITE, INVALID MEMORY ADDRESS");
 	MEM[number] = value;
 }
 
 uint32 memory_read(int number) {
-	if (number < 0 || number >= MAX_DMEM_ITEMS) throw_error(ERROR_RUNTIME, "EXCEPTION IN MEMORY READ, INVALID MEMORY ADDRESS");
+	printf("memory read at %d is %d\n", number, MEM[number]);
+	if (number < 0 || number >= MAX_DMEM_ITEMS) except("EXCEPTION IN MEMORY READ, INVALID MEMORY ADDRESS");
 	return MEM[number];
 }
 
 void ioregister_write(int number, uint32 value) {
-	if (number < 0 || number >= COUNT_IOREGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN IO REGISTER WRITE, INVALID IOREGISTER");
+	if (number < 0 || number >= COUNT_IOREGISTERS) except("EXCEPTION IN IO REGISTER WRITE, INVALID IOREGISTER");
 	IORegister[number] = value & IORegister_SIZE_OUT[number];
 	switch (number) {
 		case leds:
@@ -173,7 +195,7 @@ void ioregister_write(int number, uint32 value) {
 }
 
 uint32 ioregister_read(int number) {
-	if (number < 0 || number >= COUNT_IOREGISTERS) throw_error(ERROR_RUNTIME, "EXCEPTION IN IO REGISTER READ, INVALID IOREGISTER");
+	if (number < 0 || number >= COUNT_IOREGISTERS) except("EXCEPTION IN IO REGISTER READ, INVALID IOREGISTER");
 	return IORegister[number] & IORegister_SIZE_IN[number];
 }
 
@@ -245,8 +267,9 @@ void bge(int rd, int rs, int rt) {
 
 void jal(int rd, int rs, int rt) {
 	register_write(ra, pc+1);
-	printf("set pc from jal to %d\n",rd);
-	pc = register_read(rd) & 0x00000FFF;
+	printf("set pc from jal to %d\n",register_read(rd));
+	pc = (register_read(rd) & 0x00000FFF) - 1;
+//	printf("instruction there is %s\n", opcode_names[instructions[pc].opcode]);
 }
 
 void lw(int rd, int rs, int rt) {
@@ -290,10 +313,10 @@ void (*opcode_fn[COUNT_OPCODES])(int, int, int) = {
 */
 void perform_current_instruction() {
 	instruction ins = instructions[pc];
-	if (ins.opcode < 0 || ins.opcode >= COUNT_OPCODES) throw_error(ERROR_RUNTIME, "INVALID OPCODE");
+	if (ins.opcode < 0 || ins.opcode >= COUNT_OPCODES) except("INVALID OPCODE");
 	if (ins.rd < 0 || ins.rd > COUNT_REGISTERS
 		|| ins.rs < 0 || ins.rs > COUNT_REGISTERS
-		|| ins.rt < 0 || ins.rt > COUNT_REGISTERS) throw_error(ERROR_RUNTIME, "INVALID REGISTER");
+		|| ins.rt < 0 || ins.rt > COUNT_REGISTERS) except("INVALID REGISTER");
 
 	R[imm1] = ins.immediate1;
 	R[imm2] = ins.immediate2;
@@ -346,6 +369,7 @@ void check_interrupts() {
 		if (irq_routine) {
 			return;
 		} else {
+			printf("triggered irq\n");
 			irq_routine = 1;
 			IORegister[irqreturn] = pc;
 			pc = IORegister[irqhandler];
@@ -370,6 +394,7 @@ void perform_instruction_loop() {
 	
 	pc = 0;
 	while (0 <= pc && pc < instruction_count) {
+		write_trace();
 		check_interrupts();
 		perform_current_instruction();
 		clock_tick();
@@ -381,7 +406,7 @@ void perform_instruction_loop() {
 int main(int argc, char *argv[]) {
 	// %s <imemin.txt> <dmemin.txt> <diskin.txt> <irq2in.txt>
 	int i;
-	char **instructions_text, **dmemin_text, **diskin_text, **irq2in_text;
+	char **dmemin_text, **diskin_text, **irq2in_text;
 	
 /*	llu fifi;
 	hex_to_unsigned_long_long("0E4020000040", &fifi);
@@ -419,6 +444,8 @@ int main(int argc, char *argv[]) {
 	if ((f_diskout = fopen(argv[12], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[12]);
 	if ((f_monitor = fopen(argv[13], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[13]);
 	if ((f_monitoryuv = fopen(argv[14], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[14]);
+	
+	fprintf(f_trace, "PC	INST	R0	R1	R2	R3	R4	R5	R6	R7	R8	R9	R10	R11	R12	R13	R14	R15\n");
 	
 	perform_instruction_loop();
 	

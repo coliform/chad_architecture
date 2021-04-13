@@ -33,6 +33,17 @@ test_sim:
 #	-rm -rf imemin.txt; true
 #	-rm -rf dmemin.txt; true
 
+test: $(SRC)/chad_utils.o $(SRC)/chad_test.o
+	$(CC) -o $(OUT)/test $(SRC)/chad_utils.o $(SRC)/chad_test.o
+	-make move_objects
+	-$(OUT)/test
+
+valtest: $(SRC)/chad_utils.o $(SRC)/chad_test.o
+	$(CC) -o $(OUT)/test $(SRC)/chad_utils.o $(SRC)/chad_test.o
+	-make move_objects
+	-valgrind --leak-check=full --track-origins=yes $(OUT)/test
+	
+
 move_objects:
 	-mv -f *.o $(ODIR) 2>/dev/null; true
 	-mv -f $(SRC)/*.o $(ODIR) 2>/dev/null; true

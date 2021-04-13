@@ -1,5 +1,10 @@
 #include <chad_utils.h>
 
+#define max(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
 char CHARSET_HEX[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 
 char* STR_OPCODES[20] = {
@@ -125,7 +130,7 @@ bool hex_to_uint32(char* in, uint32* out) {
 	char* p = in;
 	*out = 0;
 	for (; *p != '\0'; p++) {
-		*out *= 16;
+		*out <<= 4;
 		if (*p >= '0' && *p <= '9') *out += (*p) - ((uint32)'0');
 		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((uint32)'A');
 		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((uint32)'a');
@@ -158,6 +163,7 @@ char* llu_to_hex(llu number, int min_width) {
 	//printf("i got %llu\n", number);
 	unsigned long long backup;
 	int hex_count,i;
+	
 
 	result=malloc((min_width+1)*sizeof(char));
 	for (i=0; i<min_width; i++) result[i]='0';
@@ -261,6 +267,71 @@ unsigned int* memtext_to_uint_arr(char** lines) {
 	for (i=0; lines[i]!=0; i++) char_to_unsigned_int(lines[i], out+i);
 
 	return out;
+}
+
+void move_string(char* start, int shift) {
+	if (shift == 0) return;
+	char *p, *end;
+	
+	p = start;
+	for (end=start; *end; end++);
+	
+	if (shift > 0) {
+		p = end;
+		while (p >= start) {
+			*(p + shift) = *(p);
+			p--;
+		}
+		
+	} else {
+		p = start;
+		while (p <= end) {
+			*(p + shift) = *(p);
+			p++;
+		}
+	}
+}
+
+void* realloc_zeros(void* in, size_t size, size_t oldsize) {
+	if (size < oldsize) return;
+	char *p;
+	int i;
+	p = realloc(in, size);
+	for (i=oldsize; i<size; i++) p[i] = 0;
+	return p;
+}
+
+bool add_chars_right(char** in, char c, int count) {
+	if (count <= 0) return SUCCESS;
+	int length, i;
+	char *tmp;
+	
+	length = strlen(*in);
+	*in = (char*) realloc_zeros(*in, (length+count+1)*sizeof(char), length+1);
+	if (!*in) return ERROR;
+	for (i=0; i<count; i++) (*in)[length+i] = c;
+	return SUCCESS;
+}
+
+bool add_chars_left(char** in, char c, int count) {
+	if (count <= 0) return SUCCESS;
+	int length, i;
+	char *tmp;
+	
+	length = strlen(*in);
+	*in = (char*) realloc_zeros(*in, (length+count+1)*sizeof(char), length+1);
+	if (!*in) return ERROR;
+	move_string(*in, count);
+	for (i=0; i<count; i++) (*in)[i] = c;
+	return SUCCESS;
+}
+
+bool pad_right(char** in, char c, int min_size) {
+	return add_chars_right(in, c, min_size-strlen(*in));
+}
+
+bool pad_left(char** in, char c, int min_size) {
+	return add_chars_left(in, c, min_size-strlen(*in));
 }
 
 unsigned long hash(unsigned char *str)

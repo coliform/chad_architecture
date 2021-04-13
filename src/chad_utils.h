@@ -22,6 +22,9 @@ typedef u_int32_t		uint32;
 typedef u_int64_t		uint64;
 typedef unsigned long long	llu;
 
+#define ERROR			1
+#define SUCCESS		0
+
 #define MAX_SIZE_PC		4096
 #define MAX_SIZE_LINE		500
 #define MAX_SIZE_LABEL		50
@@ -86,6 +89,7 @@ bool hex_to_unsigned_long_long(char* in, unsigned long long* out);
 bool hex_to_uint32(char* in, uint32* out);
 char* unsigned_long_long_to_hex(unsigned long long number);
 char* llu_to_hex(llu number, int min_width);
+llu hex_to_llu(char* in);
 char* unsigned_int_to_hex(unsigned int number);
 bool char_to_unsigned_int(char* in, unsigned int* out);
 int count_occ(char* line, char c);
@@ -97,6 +101,11 @@ unsigned int* memtext_to_uint_arr(char** lines);
 long get_file_size(FILE *f);
 char* get_file_str(char* path);
 int get_file_lines(char* path, char*** lines);
+void move_string(char* start, int shift);
+bool add_chars_left(char** in, char c, int count);
+bool add_chars_right(char** in, char c, int count);
+bool pad_right(char** in, char c, int min_size);
+bool pad_left(char** in, char c, int min_size);
 
 
 #endif

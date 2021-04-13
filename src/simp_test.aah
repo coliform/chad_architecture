@@ -1,0 +1,6 @@
+#ifndef H_CHAD_TEST
+#define H_CHAD_TEST
+
+#include <chad_utils.h>
+
+#endif
