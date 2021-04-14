@@ -6,6 +6,8 @@
 
 #include <chad_asm.h>
 
+char *path_imem, *path_dmem;
+
 
 bool immediate_to_int(char* in, unsigned int* out, label* labels, int labels_count) {
 	int i, pos, len, label_len;
@@ -226,7 +228,7 @@ int compile(char** lines, char** lines_memory) {
 		}
 	}
 
-	if ((fptr = fopen("dmemin.txt", "w"))==NULL) return ERROR_FILE_ACCESS;
+	if ((fptr = fopen(path_dmem, "w"))==NULL) return ERROR_FILE_ACCESS;
 	for (i = 0; i < MAX_DMEM_ITEMS; i++) {
 		if (dotwords[i]==0) fprintf(fptr, "000000000000\n");
 		else {
@@ -236,7 +238,7 @@ int compile(char** lines, char** lines_memory) {
 	}
 	fclose(fptr);
 
-	if ((fptr = fopen("imemin.txt", "w"))==NULL) return ERROR_FILE_ACCESS;
+	if ((fptr = fopen(path_imem, "w"))==NULL) return ERROR_FILE_ACCESS;
 	for (i = 0; i < pc; i++) {
 		line = instruction_to_hex(instructions[i]);
 		fprintf(fptr, "%s\n", line);
@@ -263,7 +265,7 @@ int main(int argc, char *argv[]) {
 	for(i=0;i<16;i++) HASH_REGISTERS[i]=hash(STR_REGISTERS[i]);
 	for(i=0;i<23;i++) HASH_IOREGISTERS[i]=hash(STR_IOREGISTERS[i]);
 
-	if (argc < 2 || argc > 3) {
+	if (argc < 2) {
 		throw_error(ERROR_PARAMETERS, argv[0]);
 		/*printf("Format is as following:\n");
 		printf("%s <program path> <memory path>", argv[0]);
@@ -271,8 +273,15 @@ int main(int argc, char *argv[]) {
 	}
 
 	count_program = get_file_lines(argv[1], &lines_program);
-	if (argc==3) count_mem = get_file_lines(argv[2], &lines_mem);
-	else count_mem = split("", '\n', &lines_mem);
+	if (argc == 4) {
+		path_imem = argv[2];
+		path_dmem = argv[3];
+	} else {
+		path_imem = "imemin.txt";
+		path_dmem = "dmemin.txt";
+	}
+	//if (argc==3) count_mem = get_file_lines(argv[2], &lines_mem);
+	count_mem = split("", '\n', &lines_mem);
 
 	compile(lines_program, lines_mem);
 

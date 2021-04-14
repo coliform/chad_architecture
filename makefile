@@ -21,14 +21,14 @@ sim: $(SRC)/chad_utils.o $(SRC)/sim/chad_sim.o
 	
 test_asm:
 	-make asm
-	-$(OUT)/asm $(TESTDIR)/fib/fib.asm
-	-if diff -q --strip-trailing-cr imemin.txt $(TESTDIR)/fib/imemin.txt; then echo "Equal"; else echo "Neq"; fi
+	-$(OUT)/asm $(TESTDIR)/fib/fib.asm drafts/imemin.txt drafts/dmemin.txt
+	-if diff -q --strip-trailing-cr drafts/imemin.txt $(TESTDIR)/fib/imemin.txt; then echo "Equal"; else echo "Neq"; fi
 	-rm -rf imemin.txt; true
 	-rm -rf dmemin.txt; true
 
 test_sim:
 	-make sim
-	-$(OUT)/sim drafts/imemin.txt drafts/fib/dmemin.txt $(TESTDIR)/fib/diskin.txt $(TESTDIR)/fib/irq2in.txt drafts/dmemout.txt drafts/regout.txt drafts/trace.txt drafts/hwregtrace.txt drafts/cycles.txt drafts/leds.txt drafts/display.txt drafts/diskout.txt drafts/monitor.txt drafts/monitor.yuv
+	-$(OUT)/sim drafts/imemin.txt drafts/dmemin.txt $(TESTDIR)/fib/diskin.txt $(TESTDIR)/fib/irq2in.txt drafts/dmemout.txt drafts/regout.txt drafts/trace.txt drafts/hwregtrace.txt drafts/cycles.txt drafts/leds.txt drafts/display.txt drafts/diskout.txt drafts/monitor.txt drafts/monitor.yuv
 	-if diff -q --strip-trailing-cr drafts/trace.txt $(TESTDIR)/fib/trace.txt; then echo "Equal"; else echo "Neq"; fi
 	-if diff -q --strip-trailing-cr drafts/leds.txt $(TESTDIR)/fib/leds.txt; then echo "Equal"; else echo "Neq"; fi
 	-if diff -q --strip-trailing-cr drafts/monitor.txt $(TESTDIR)/fib/monitor.txt; then echo "Equal"; else echo "Neq"; fi
@@ -49,10 +49,11 @@ test_sim_valgrind:
 #	-rm -rf imemin.txt; true
 #	-rm -rf dmemin.txt; true
 
-test: $(SRC)/chad_utils.o $(SRC)/chad_test.o
-	$(CC) -o $(OUT)/test $(SRC)/chad_utils.o $(SRC)/chad_test.o
-	-make move_objects
-	-$(OUT)/test
+test:
+	-make sim
+	-make asm
+	-$(OUT)/asm $(TESTDIR)/$(NAME)/$(NAME).asm drafts/imemin.txt drafts/dmemin.txt
+	-$(OUT)/sim drafts/imemin.txt drafts/dmemin.txt $(TESTDIR)/$(NAME)/diskin.txt $(TESTDIR)/$(NAME)/irq2in.txt drafts/dmemout.txt drafts/regout.txt drafts/trace.txt drafts/hwregtrace.txt drafts/cycles.txt drafts/leds.txt drafts/display.txt drafts/diskout.txt drafts/monitor.txt drafts/monitor.yuv
 
 valtest: $(SRC)/chad_utils.o $(SRC)/chad_test.o
 	$(CC) -o $(OUT)/test $(SRC)/chad_utils.o $(SRC)/chad_test.o
