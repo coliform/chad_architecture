@@ -33,6 +33,8 @@ test_sim:
 	-if diff -q --strip-trailing-cr drafts/leds.txt $(TESTDIR)/fib/leds.txt; then echo "Equal"; else echo "Neq"; fi
 	-if diff -q --strip-trailing-cr drafts/monitor.txt $(TESTDIR)/fib/monitor.txt; then echo "Equal"; else echo "Neq"; fi
 	-if diff -q --strip-trailing-cr drafts/monitor.yuv $(TESTDIR)/fib/monitor.yuv; then echo "Equal"; else echo "Neq"; fi
+	-if diff -q --strip-trailing-cr drafts/regout.txt $(TESTDIR)/fib/regout.txt; then echo "Equal"; else echo "Neq"; fi
+	-if diff -q --strip-trailing-cr drafts/hwregtrace.txt $(TESTDIR)/fib/hwregtrace.txt; then echo "Equal"; else echo "Neq"; fi
 #	-if diff -q --strip-trailing-cr imemin.txt $(TESTDIR)/fib/imemin.txt; then echo "Equal"; else echo "Neq"; fi
 #	-rm -rf imemin.txt; true
 #	-rm -rf dmemin.txt; true

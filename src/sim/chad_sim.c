@@ -77,6 +77,19 @@ void write_trace() {
 	fprintf(f_trace, "\n");
 }
 
+void write_cycles() {
+	fprintf(f_cycles, "%d", IORegister[clks]);
+}
+
+void write_registers() {
+	char* hex;
+	for (int i=3; i<COUNT_REGISTERS; i++) {
+		hex = llu_to_hex((llu)R[i],8);
+		fprintf(f_regout, "%s\n", hex);
+		free(hex);
+	}
+}
+
 void except(const char* details) {
 	printf("Simulator crashed. PC=%d\n", pc);
 	printf("%s\n", details);
@@ -196,10 +209,7 @@ void print_monitor_to_file() {
 }
 
 void print_monitor_to_file_yuv() {
-	printf("Writing to yuv\n");
-	int i;
 	f_monitoryuv=freopen(NULL,"wb",f_monitoryuv);
-	printf("Writing %d to yuv\n", sizeof(uint8));
 	// APPARENTLY FWRITE IS BUILT DIFFERENTLY THAN FPRINTF LOL
 	fwrite(&monitor, sizeof(uint8), SIZE_MONITOR, f_monitoryuv);
 }
@@ -463,7 +473,8 @@ void perform_instruction_loop() {
 		//press_enter();
 	}
 	
-	fprintf(f_cycles, "%d", IORegister[clks]);
+	write_cycles();
+	write_registers();
 }
 
 
