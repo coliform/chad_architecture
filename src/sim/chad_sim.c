@@ -195,6 +195,15 @@ void print_monitor_to_file() {
 	}
 }
 
+void print_monitor_to_file_yuv() {
+	printf("Writing to yuv\n");
+	int i;
+	f_monitoryuv=freopen(NULL,"wb",f_monitoryuv);
+	printf("Writing %d to yuv\n", sizeof(uint8));
+	// APPARENTLY FWRITE IS BUILT DIFFERENTLY THAN FPRINTF LOL
+	fwrite(&monitor, sizeof(uint8), SIZE_MONITOR, f_monitoryuv);
+}
+
 void write_monitor() {
 	uint32 addr, data;
 	if (!IORegister[monitorcmd]) return;
@@ -202,6 +211,7 @@ void write_monitor() {
 	data = IORegister[monitordata];
 	monitor[addr] = data;
 	print_monitor_to_file();
+	print_monitor_to_file_yuv();
 }
 
 // register_write:
@@ -492,7 +502,7 @@ int main(int argc, char *argv[]) {
 	if ((f_display7seg = fopen(argv[11], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[11]);
 	if ((f_diskout = fopen(argv[12], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[12]);
 	if ((f_monitor = fopen(argv[13], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[13]);
-	if ((f_monitoryuv = fopen(argv[14], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[14]);
+	if ((f_monitoryuv = fopen(argv[14], "wb"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[14]);
 	
 	//fprintf(f_trace, "PC	INST	R0	R1	R2	R3	R4	R5	R6	R7	R8	R9	R10	R11	R12	R13	R14	R15\n");
 	
