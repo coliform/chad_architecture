@@ -124,11 +124,24 @@ void write_dmemout() {
 
 void write_diskout() {
 	char* hex;
-	int sector_number, sector_cell;
+	int sector_number, sector_cell, last_nonzero;
+	
+	last_nonzero = -1;
 	for (sector_number=0; sector_number<SIZE_HDD_SECTORS_H; sector_number++) {
 		for (sector_cell=0; sector_cell<SIZE_HDD_SECTORS_W; sector_cell++) {
+			if (disk[sector_number][sector_cell]!=0) {
+				last_nonzero = sector_number;
+				sector_cell = SIZE_HDD_SECTORS_W;
+			}
+		}
+		if (last_nonzero != sector_number) break;
+	}
+	if (last_nonzero == -1) return;
+	
+	for (sector_number=0; sector_number<=last_nonzero; sector_number++) {
+		for (sector_cell=0; sector_cell<SIZE_HDD_SECTORS_W; sector_cell++) {
 			hex = llu_to_hex((llu)disk[sector_number][sector_cell], 8);
-			fprintf(f_diskout, "%s", hex);
+			fprintf(f_diskout, "%s\n", hex);
 			free(hex);
 		}
 	}
