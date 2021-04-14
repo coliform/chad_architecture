@@ -169,23 +169,20 @@ char* llu_to_hex(llu number, int min_width) {
 	//printf("i got %llu\n", number);
 	unsigned long long backup;
 	int hex_count,i;
-	printf("Converting %d\n", number);
 	
 
 	result=malloc((min_width+1)*sizeof(char));
 	for (i=0; i<min_width; i++) result[i]='0';
 	result[min_width]=0;
 	backup=number;
-		printf("Converting %d\n", number);
 	for (backup=number, i=min_width-1; backup>0, i>=0; backup>>=4, i--) {
 		//printf("backup&15=%llu and %llu\n",backup&15, backup);
 		result[i] = CHARSET_HEX[((llu)backup)&((unsigned long long)15)];
-			printf("%d\n", backup);
 		//printf("result is %s\n", result);
 	}
 	//printf("%llu\t%d, %s <-> ", number, i, result);
-	result[hex_count]=0;
-		printf("Converting %d\n", number);
+	//result[hex_count]=0;
+	//printf("result is %s\n", result);
 	return result;
 }
 
@@ -194,23 +191,19 @@ char* llu_to_hex_low(llu number, int min_width) {
 	//printf("i got %llu\n", number);
 	unsigned long long backup;
 	int hex_count,i;
-	printf("Converting %d\n", number);
 	
 
 	result=malloc((min_width+1)*sizeof(char));
 	for (i=0; i<min_width; i++) result[i]='0';
 	result[min_width]=0;
 	backup=number;
-		printf("Converting %d\n", number);
 	for (backup=number, i=min_width-1; backup>0, i>=0; backup>>=4, i--) {
 		//printf("backup&15=%llu and %llu\n",backup&15, backup);
 		result[i] = CHARSET_HEX_LOW[((llu)backup)&((unsigned long long)15)];
-			printf("%d\n", backup);
 		//printf("result is %s\n", result);
 	}
 	//printf("%llu\t%d, %s <-> ", number, i, result);
-	result[hex_count]=0;
-		printf("Converting %d\n", number);
+	//result[hex_count]=0;
 	return result;
 }
 
@@ -328,7 +321,7 @@ void move_string(char* start, int shift) {
 }
 
 void* realloc_zeros(void* in, size_t size, size_t oldsize) {
-	if (size < oldsize) return;
+	if (size < oldsize) return NULL;
 	char *p;
 	int i;
 	p = realloc(in, size);

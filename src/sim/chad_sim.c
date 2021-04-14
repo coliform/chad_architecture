@@ -77,7 +77,7 @@ void write_trace() {
 	fprintf(f_trace, "\n");
 }
 
-except(const char* details) {
+void except(const char* details) {
 	printf("Simulator crashed. PC=%d\n", pc);
 	printf("%s\n", details);
 	fclose(f_trace);
@@ -177,8 +177,9 @@ void read_irq2in(char** lines) {
 }
 
 void write_leds() {
+	char* hex;
 	uint32 value = IORegister[leds];
-	char* hex = unsigned_long_long_to_hex((llu)value);
+	hex = llu_to_hex_low((llu)value, 8);
 	fprintf(f_leds, "%d %s\n", IORegister[clks], hex);
 	free(hex);
 }
@@ -186,10 +187,11 @@ void write_leds() {
 void print_monitor_to_file() {
 	int i;
 	char* hex;
+	f_monitor=freopen(NULL,"w",f_monitor);
 	for (i=0; i<SIZE_MONITOR; i++) {
-		/*hex = llu_to_hex((llu)monitor[i], 2);
+		hex = llu_to_hex((llu)monitor[i], 2);
 		fprintf(f_monitor, "%s\n", hex);
-		free(hex);*/
+		free(hex);
 	}
 }
 
@@ -446,10 +448,12 @@ void perform_instruction_loop() {
 		perform_current_instruction();
 		clock_tick();
 		//if (IORegister[clks] >= 10) exit(0);
-		print_registers();
-		printf("Cycle %d, ", IORegister[clks]-1);
+		//print_registers();
+		//printf("Cycle %d, ", IORegister[clks]-1);
 		//press_enter();
 	}
+	
+	fprintf(f_cycles, "%d", IORegister[clks]);
 }
 
 
