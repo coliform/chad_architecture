@@ -13,7 +13,7 @@ char **imemin_text, **dmemin_text, **diskin_text, **irq2in_text;
 uint32 pc;
 instruction instructions[MAX_SIZE_PC];
 char **instructions_text;
-int instruction_count, sector_count;
+int instruction_count, sector_count, sector_head;
 FILE *f_dmemout, *f_regout, *f_trace, *f_hwregtrace, *f_cycles, *f_leds, *f_display7seg, *f_diskout, *f_monitor, *f_monitoryuv;
 bool irq0, irq1, irq2, irq, irq_routine;
 
@@ -27,7 +27,7 @@ uint32 IORegister_SIZE_OUT[COUNT_IOREGISTERS] = {
 	0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000FFF, 0x00000FFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000001, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000003, 0x0000007F, 0x00000FFF, 0x00000001, 0x00000000, 0x00000000, 0x0000FFFF, 0x000000FF, 0x00000001
 };
 uint32 MEM[MAX_DMEM_ITEMS];
-uint8 disk[SIZE_HDD_SECTORS_H][SIZE_HDD_SECTORS_W];
+uint32 disk[SIZE_HDD_SECTORS_H][SIZE_HDD_SECTORS_W];
 uint8 monitor[SIZE_MONITOR_H*SIZE_MONITOR_W];
 uint32 irq2in_i, irq2in_count;
 uint32 *irq2in_feed;
@@ -124,6 +124,14 @@ void write_dmemout() {
 
 void write_diskout() {
 	char* hex;
+	int sector_number, sector_cell;
+	for (sector_number=0; sector_number<SIZE_HDD_SECTORS_H; sector_number++) {
+		for (sector_cell=0; sector_cell<SIZE_HDD_SECTORS_W; sector_cell++) {
+			hex = llu_to_hex((llu)disk[sector_number][sector_cell], 8);
+			fprintf(f_diskout, "%s", hex);
+			free(hex);
+		}
+	}
 }
 
 void except(const char* details) {
@@ -171,15 +179,23 @@ void read_instructions(char** lines) {
 	instruction_count = counted;
 }
 
-void parse_disk_sector(char* line, int index) {
-	// TODO
+void parse_disk_sector(char* line, int sector_number, int sector_cell) {
+	hex_to_uint32(line, &disk[sector_number][sector_cell]);
 }
 
 void read_disk(char** lines) {
-	int i, counted;
+	int i, counted, sector_number, sector_cell;
 	for (i=0, counted=0; lines[i]!=0; i++) {
 		if (strlen(lines[i])==0) continue;
-		parse_disk_sector(lines[i], counted);
+		if (sector_cell == SIZE_HDD_SECTORS_W) {
+			sector_cell = 0;
+			sector_number++;
+		}
+		if (sector_number == SIZE_HDD_SECTORS_H) {
+			except("DISK TOO LARGE");
+		}
+		
+		parse_disk_sector(lines[i], sector_number, sector_cell);
 		counted++;
 	}
 	sector_count = counted;
@@ -286,20 +302,90 @@ uint32 memory_read(int number) {
 	return MEM[number];
 }
 
+void DMA_write() {
+	// MEM -> disk
+	// disksector -	sector number
+	// sizeof(disksector)=7 bits (128 sectors total)
+	// disk[disksector] -	actual sector being written
+	// sizeof(disk[disksector])=512 bytes
+	// diskbuffer -	address to buffer, 12 bits long (0-4095)
+	// MEM[diskbuffer] -	start of actual data being copied to disk
+	// sizeof(MEM[diskbuffer]) = sizeof(word) = 32 bits = 4 bytes
+	// we copy one word at a time
+	// 128 sectors, 128 4-byte-words in each = 65536 bytes = 64 kilobytes
+
+	// 1024 runs in total somehow
+	// if we wanted to fill a whole sector
+	// one sector is 512 bytes
+	// so 4096 bits
+	// written in 4 byte words
+	// meaning 32 bits
+	// 128 runs in total, idk why 1024
+	if (IORegister[diskcmd]!=2) return; // verifies write command
+	if (sector_head <= SIZE_HDD_SECTORS_W) {
+		disk[disksector][sector_head] = MEM[diskbuffer+sector_head];
+	}
+}
+
+void DMA_read() {
+	// disk -> MEM
+	if (IORegister[diskcmd]!=1) return; // verifies write command
+	if (sector_head <= SIZE_HDD_SECTORS_W) {
+		MEM[diskbuffer+sector_head] = disk[disksector][sector_head];
+	}
+}
+
+void DMA_write_now() {
+	// do it immediately
+	for (sector_head = 0; sector_head < SIZE_HDD_SECTORS_W; sector_head++) {
+		DMA_write();
+	}
+	// and reset head
+	sector_head = 0;
+}
+
+void DMA_read_now() {
+	// do it immediately
+	for (sector_head = 0; sector_head < SIZE_HDD_SECTORS_W; sector_head++) {
+		DMA_read();
+	}
+	// and reset head
+	sector_head = 0;
+}
+
+void assign_disk_cmd(uint32 cmd) {
+	if (IORegister[diskstatus]==1) {
+		// disk is busy
+		return;
+	}
+	
+	sector_head = 0;
+	IORegister[diskcmd] = cmd;
+	IORegister[diskstatus] = 1;
+}
+
 void ioregister_write(int number, uint32 value) {
 	if (number < 0 || number >= COUNT_IOREGISTERS) except("EXCEPTION IN IO REGISTER WRITE, INVALID IOREGISTER");
-	IORegister[number] = value & IORegister_SIZE_OUT[number];
+	value &= IORegister_SIZE_OUT[number];
 	switch (number) {
 		case leds:
+			IORegister[number] = value;
 			write_leds();
 			break;
 		case monitorcmd:
+			IORegister[number] = value;
 			write_monitor();
 			break;
 		case display:
+			IORegister[number] = value;
 			write_display7seg();
 			break;
+		case diskcmd:
+			// don't assign automatically here
+			assign_disk_cmd(IORegister[number]);
+			break;
 		default:
+			IORegister[number] = value & IORegister_SIZE_OUT[number];
 			break;
 	}
 	write_trace_hwreg("WRITE", number, value);
@@ -318,6 +404,10 @@ uint32 ioregister_read(int number) {
 * The functions below contain the opcodes
 *
 */
+
+void set_pc(int i) {
+	pc = (i&0x00000FFF)-1;
+}
 
 void clock_tick() {
 	if (IORegister[clks]==0xFFFFFFFF) IORegister[clks]=0;
@@ -354,33 +444,33 @@ void srl(int rd, int rs, int rt) {
 }
 
 void beq(int rd, int rs, int rt) {
-	if (register_read(rs)==register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
+	if (register_read(rs)==register_read(rt)) set_pc(register_read(rd));
 }
 
 void bne(int rd, int rs, int rt) {
-	if (register_read(rs)!=register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
+	if (register_read(rs)!=register_read(rt)) set_pc(register_read(rd));
 }
 
 void blt(int rd, int rs, int rt) {
-	if (register_read(rs)<register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
+	if (register_read(rs)<register_read(rt)) set_pc(register_read(rd));
 }
 
 void bgt(int rd, int rs, int rt) {
-	if (register_read(rs)>register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
+	if (register_read(rs)>register_read(rt)) set_pc(register_read(rd));
 }
 
 void ble(int rd, int rs, int rt) {
-	if (register_read(rs)<=register_read(rt)) pc = (register_read(rd) & 0x00000FFF)-1;
+	if (register_read(rs)<=register_read(rt)) set_pc(register_read(rd));
 }
 
 void bge(int rd, int rs, int rt) {
-	if (register_read(rs)>=register_read(rt)) (pc = register_read(rd) & 0x00000FFF)-1;
+	if (register_read(rs)>=register_read(rt)) set_pc(register_read(rd));
 }
 
 void jal(int rd, int rs, int rt) {
 	register_write(ra, pc+1);
 	printf("set pc from jal to %d\n",register_read(rd));
-	pc = (register_read(rd) & 0x00000FFF)-1;
+	set_pc(register_read(rd));
 //	printf("instruction there is %s\n", opcode_names[instructions[pc].opcode]);
 }
 
@@ -393,7 +483,7 @@ void sw(int rd, int rs, int rt) {
 }
 
 void reti(int rd, int rs, int rt) {
-	pc = IORegister[irqreturn]-1;
+	set_pc(IORegister[irqreturn]);
 	irq_routine = 0;
 }
 
@@ -445,6 +535,7 @@ void check_interrupt_0() {
 	if (IORegister[timerenable] == 0) return;
 	if (IORegister[timercurrent] < IORegister[timermax]) {
 		IORegister[timercurrent] += 1;
+		IORegister[irq0status] = 0;
 	} else {
 		IORegister[timercurrent] = 0;
 		IORegister[irq0status] = 1;
@@ -453,12 +544,38 @@ void check_interrupt_0() {
 
 void check_interrupt_1() {
 	// DISK
-	irq1 = IORegister[irq1enable] & IORegister[irq1status];
-	irq |= irq1;
+	if (IORegister[irq1enable] == 0) return;
+	if (IORegister[diskcmd] == 0 && IORegister[diskstatus] == 0) {
+		IORegister[irq1status] = 0;
+	}
 	
-	// TODO after 1024 runs and copying via DMA
-	IORegister[diskcmd] = 0;
-	IORegister[diskstatus] = 0;
+	if (IORegister[diskstatus]==1) {
+		switch (IORegister[diskcmd]) {
+			case 1:
+				DMA_write();
+				break;
+			case 2:
+				DMA_read();
+				break;
+			default: break;
+		}
+		sector_head++;
+		
+		// rather than the DMA functions setting it:
+		if (sector_head == 1024) {
+			IORegister[diskcmd] = 0;
+			IORegister[diskstatus] = 0;
+			// we want irq to trigger simultaneously if access is done
+			IORegister[irq1status] = 1;
+		}
+	}
+	
+	irq1 = IORegister[irq1enable] & IORegister[irq1status];
+	if (irq1) {
+		IORegister[diskcmd] = 0;
+		IORegister[diskstatus] = 0;
+	}
+	irq |= irq1;
 }
 
 void check_interrupt_2() {
@@ -467,6 +584,8 @@ void check_interrupt_2() {
 	if (irq2in_feed[irq2in_i]==IORegister[clks]) {
 		IORegister[irq2status] = 1;
 		irq2in_i++;
+	} else {
+		IORegister[irq2status] = 0;
 	}
 	irq2 = IORegister[irq2enable] & IORegister[irq2status];
 	irq |= irq2;
@@ -488,8 +607,6 @@ void check_interrupts() {
 		} else {
 			printf("triggered irq\n");
 			irq_routine = 1;
-			/*ioregister_write(irqreturn, pc);
-			pc = ioregister_read(irqhandler);*/
 			IORegister[irqreturn] = pc;
 			pc = IORegister[irqhandler];
 		}
@@ -520,6 +637,7 @@ void perform_instruction_loop() {
 	write_cycles();
 	write_registers();
 	write_dmemout();
+	write_diskout();
 }
 
 

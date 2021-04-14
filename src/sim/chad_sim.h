@@ -4,7 +4,8 @@
 #include <chad_utils.h>
 
 #define SIZE_HDD_SECTORS_H		128
-#define SIZE_HDD_SECTORS_W		512
+#define SIZE_HDD_SECTORS_W		128
+#define SIZE_HDD_SECTOR_CELL		32
 
 #define SIZE_MONITOR_H			256
 #define SIZE_MONITOR_W			256
