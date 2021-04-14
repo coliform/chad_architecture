@@ -36,6 +36,7 @@ int irq1_i;
 #if DEBUG==1
 char* opcode_names[COUNT_OPCODES]={"add", "sub", "and", "or", "sll", "sra", "srl", "beq", "bne", "blt", "bgt", "ble", "bge", "jal", "lw", "sw", "reti", "in", "out", "halt"};
 char* register_names[COUNT_REGISTERS]={"zero", "imm1", "imm2", "v0", "a0", "a1", "a2", "t0", "t1", "t2", "s0", "s1", "s2", "gp", "sp", "ra"};
+char* ioregister_names[COUNT_IOREGISTERS]={"irq0enable", "irq1enable", "irq2enable", "irq0status", "irq1status", "irq2status", "irqhandler", "irqreturn", "clks", "leds", "display", "timerenable", "timercurrent", "timermax", "diskcmd", "disksector", "diskbuffer", "diskstatus", "reserved", "reserved", "monitoraddr", "monitordata", "monitorcmd"};
 
 void print_registers() {
 	int i;
@@ -88,6 +89,13 @@ void write_registers() {
 		fprintf(f_regout, "%s\n", hex);
 		free(hex);
 	}
+}
+
+void write_trace_hwreg(char* action, int number, uint32 value) {
+	char* hex;
+	hex = llu_to_hex_low((llu)value, 8);
+	fprintf(f_hwregtrace, "%d %s %s %s\n", IORegister[clks], action, ioregister_names[number], hex);
+	free(hex);
 }
 
 void except(const char* details) {
@@ -262,10 +270,12 @@ void ioregister_write(int number, uint32 value) {
 		default:
 			break;
 	}
+	write_trace_hwreg("WRITE", number, value);
 }
 
 uint32 ioregister_read(int number) {
 	if (number < 0 || number >= COUNT_IOREGISTERS) except("EXCEPTION IN IO REGISTER READ, INVALID IOREGISTER");
+	write_trace_hwreg("READ", number, IORegister[number] & IORegister_SIZE_IN[number]);
 	return IORegister[number] & IORegister_SIZE_IN[number];
 }
 
@@ -351,7 +361,7 @@ void sw(int rd, int rs, int rt) {
 }
 
 void reti(int rd, int rs, int rt) {
-	pc = ioregister_read(irqreturn)-1;
+	pc = IORegister[irqreturn]-1;
 	irq_routine = 0;
 }
 
@@ -446,6 +456,8 @@ void check_interrupts() {
 		} else {
 			printf("triggered irq\n");
 			irq_routine = 1;
+			/*ioregister_write(irqreturn, pc);
+			pc = ioregister_read(irqhandler);*/
 			IORegister[irqreturn] = pc;
 			pc = IORegister[irqhandler];
 		}
