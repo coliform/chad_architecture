@@ -98,6 +98,34 @@ void write_trace_hwreg(char* action, int number, uint32 value) {
 	free(hex);
 }
 
+void write_display7seg() {
+	char* hex;
+	hex = llu_to_hex_low((llu)IORegister[display], 8);
+	fprintf(f_display7seg, "%d %s\n", IORegister[clks], hex);
+	free(hex);
+}
+
+void write_dmemout() {
+	char* hex;
+	int last_nonzero, i;
+	
+	last_nonzero = -1;
+	for (i=0; i<MAX_DMEM_ITEMS; i++) {
+		if (MEM[i]!=0) last_nonzero = i;
+	}
+	if (last_nonzero==-1) return;
+	
+	for (i=0; i<=last_nonzero; i++) {
+		hex = llu_to_hex((llu)MEM[i], 8);
+		fprintf(f_dmemout, "%s\n", hex);
+		free(hex);
+	}
+}
+
+void write_diskout() {
+	char* hex;
+}
+
 void except(const char* details) {
 	printf("Simulator crashed. PC=%d\n", pc);
 	printf("%s\n", details);
@@ -267,6 +295,10 @@ void ioregister_write(int number, uint32 value) {
 			break;
 		case monitorcmd:
 			write_monitor();
+			break;
+		case display:
+			write_display7seg();
+			break;
 		default:
 			break;
 	}
@@ -487,6 +519,7 @@ void perform_instruction_loop() {
 	
 	write_cycles();
 	write_registers();
+	write_dmemout();
 }
 
 
