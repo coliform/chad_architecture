@@ -6,6 +6,7 @@
      _a > _b ? _a : _b; })
 
 char CHARSET_HEX[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+char CHARSET_HEX_LOW[16] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
 char* STR_OPCODES[20] = {
 	"add","sub","and","or","sll","sra",
@@ -63,9 +64,15 @@ char* get_file_str(char* path) {
 
 int get_file_lines(char* path, char*** result) {
 	int lines_count, i;
+	char* j;
 	char* raw;
 	raw = get_file_str(path);
 	lines_count = split(raw,'\n', result);
+	for (i=0; i<lines_count; i++) {
+		j=(*result)[i];
+		while (*j && *j!='\r') j++;
+		*j = 0;
+	}
 	free(raw);
 	return lines_count;
 }
@@ -162,19 +169,48 @@ char* llu_to_hex(llu number, int min_width) {
 	//printf("i got %llu\n", number);
 	unsigned long long backup;
 	int hex_count,i;
+	printf("Converting %d\n", number);
 	
 
 	result=malloc((min_width+1)*sizeof(char));
 	for (i=0; i<min_width; i++) result[i]='0';
 	result[min_width]=0;
 	backup=number;
+		printf("Converting %d\n", number);
 	for (backup=number, i=min_width-1; backup>0, i>=0; backup>>=4, i--) {
 		//printf("backup&15=%llu and %llu\n",backup&15, backup);
-		result[i] = CHARSET_HEX[backup&((unsigned long long)15)];
+		result[i] = CHARSET_HEX[((llu)backup)&((unsigned long long)15)];
+			printf("%d\n", backup);
 		//printf("result is %s\n", result);
 	}
 	//printf("%llu\t%d, %s <-> ", number, i, result);
 	result[hex_count]=0;
+		printf("Converting %d\n", number);
+	return result;
+}
+
+char* llu_to_hex_low(llu number, int min_width) {
+	char* result;
+	//printf("i got %llu\n", number);
+	unsigned long long backup;
+	int hex_count,i;
+	printf("Converting %d\n", number);
+	
+
+	result=malloc((min_width+1)*sizeof(char));
+	for (i=0; i<min_width; i++) result[i]='0';
+	result[min_width]=0;
+	backup=number;
+		printf("Converting %d\n", number);
+	for (backup=number, i=min_width-1; backup>0, i>=0; backup>>=4, i--) {
+		//printf("backup&15=%llu and %llu\n",backup&15, backup);
+		result[i] = CHARSET_HEX_LOW[((llu)backup)&((unsigned long long)15)];
+			printf("%d\n", backup);
+		//printf("result is %s\n", result);
+	}
+	//printf("%llu\t%d, %s <-> ", number, i, result);
+	result[hex_count]=0;
+		printf("Converting %d\n", number);
 	return result;
 }
 

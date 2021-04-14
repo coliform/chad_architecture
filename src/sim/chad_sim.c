@@ -7,6 +7,8 @@
 #include <chad_sim.h>
 
 
+char **imemin_text, **dmemin_text, **diskin_text, **irq2in_text;
+
 // program metadata
 uint32 pc;
 instruction instructions[MAX_SIZE_PC];
@@ -50,15 +52,27 @@ void press_enter() {
 	scanf("%c",&ch);
 	if (ch == '0') pc = instruction_count;
 }
-#endif
 
-void write_trace() {
+void write_pretty_trace() {
 	fprintf(f_trace, "%d", pc);
 	fprintf(f_trace, "\t");
 	fprintf(f_trace, "%s", opcode_names[instructions[pc].opcode]);
 	for (int i=0; i<COUNT_REGISTERS; i++) {
 		fprintf(f_trace, "\t");
 		fprintf(f_trace, "%d", R[i]);
+	}
+	fprintf(f_trace, "\n");
+}
+#endif
+
+void write_trace() {
+	char* hex;
+	fprintf(f_trace, "%s", llu_to_hex(pc, 3));
+	fprintf(f_trace, " %s", imemin_text[pc]);
+	for (int i=0; i<COUNT_REGISTERS; i++) {
+		hex = llu_to_hex_low((llu)R[i],8);
+		fprintf(f_trace, " %s", hex);
+		free(hex);
 	}
 	fprintf(f_trace, "\n");
 }
@@ -130,7 +144,6 @@ void read_dmemin(char** lines) {
 		counted++;
 	}
 	instruction_count = counted;
-		printf("MEM[64]=%d\n",MEM[64]);
 }
 
 void parse_irq2in_line(char* line, int index) {
@@ -174,9 +187,9 @@ void print_monitor_to_file() {
 	int i;
 	char* hex;
 	for (i=0; i<SIZE_MONITOR; i++) {
-		hex = llu_to_hex((llu)monitor[i], 2);
+		/*hex = llu_to_hex((llu)monitor[i], 2);
 		fprintf(f_monitor, "%s\n", hex);
-		free(hex);
+		free(hex);*/
 	}
 }
 
@@ -443,7 +456,6 @@ void perform_instruction_loop() {
 int main(int argc, char *argv[]) {
 	// %s <imemin.txt> <dmemin.txt> <diskin.txt> <irq2in.txt>
 	int i;
-	char **dmemin_text, **diskin_text, **irq2in_text;
 	
 /*	llu fifi;
 	hex_to_unsigned_long_long("0E4020000040", &fifi);
@@ -454,21 +466,17 @@ int main(int argc, char *argv[]) {
 	
 	if (argc != 15) throw_error(ERROR_PARAMETERS_SIM, argv[0]); // god help me
 	
-	get_file_lines(argv[1], &instructions_text);
-	read_instructions(instructions_text);
-	free_lines(instructions_text);
+	get_file_lines(argv[1], &imemin_text);
+	read_instructions(imemin_text);
 	
 	get_file_lines(argv[2], &dmemin_text);
 	read_dmemin(dmemin_text);
-	free_lines(dmemin_text);
 	
 	get_file_lines(argv[3], &diskin_text);
 	read_disk(diskin_text);
-	free_lines(diskin_text);
 	
 	get_file_lines(argv[4], &irq2in_text);
 	read_irq2in(irq2in_text);
-	free_lines(irq2in_text);
 	
 
 	if ((f_dmemout = fopen(argv[5], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[5]);
@@ -482,7 +490,7 @@ int main(int argc, char *argv[]) {
 	if ((f_monitor = fopen(argv[13], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[13]);
 	if ((f_monitoryuv = fopen(argv[14], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[14]);
 	
-	fprintf(f_trace, "PC	INST	R0	R1	R2	R3	R4	R5	R6	R7	R8	R9	R10	R11	R12	R13	R14	R15\n");
+	//fprintf(f_trace, "PC	INST	R0	R1	R2	R3	R4	R5	R6	R7	R8	R9	R10	R11	R12	R13	R14	R15\n");
 	
 	perform_instruction_loop();
 	
@@ -496,5 +504,10 @@ int main(int argc, char *argv[]) {
 	fclose(f_diskout);
 	fclose(f_monitor);
 	fclose(f_monitoryuv);
+	
+	free_lines(imemin_text);
+	free_lines(dmemin_text);
+	free_lines(diskin_text);
+	free_lines(irq2in_text);
 	return 0;
 }
