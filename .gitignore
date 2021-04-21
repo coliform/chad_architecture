@@ -3,3 +3,4 @@ drafts/*
 src/*.o
 src/sim/*.o
 src/asm/*.o
+tests/fib
