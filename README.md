@@ -1,8 +1,26 @@
 # CHAD
 
-For the computer architecture course that I'm taking, we were tasked to build an assembler & a simulator for an ISA called CHAD (lol).
+Assembler & simulator for an ISA called CHAD
 
-This is my progress so far, this repository contains both the simulator and the assembler.
+
+## folders
+
+### src/asm
+
+The assembler is responsible for converting .asm files into machine code
+
+
+### src/sim
+
+The simulator is responsible for simulating a CHAD processor environment
+
+
+### tests
+
+Contains test files - disktest, summat
+
+Each test has its own separate folder.
+
 
 ## make cheatsheet
 
@@ -14,4 +32,4 @@ This is my progress so far, this repository contains both the simulator and the 
 
 `make asm_test`
 
-`NAME=fib make test`
+`NAME=disktest make test`
