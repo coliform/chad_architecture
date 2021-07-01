@@ -1,4 +1,4 @@
-#include <chad_utils.h>
+#include "chad_utils.h"
 
 #define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -24,11 +24,17 @@ char* STR_REGISTERS[16] = {
 char* STR_IOREGISTERS[23] = {
 	"irq0enable","irq1enable","irq2enable","irq0status",
 	"irq1status","irq2status","irqhandler","irqreturn",
-	"clks","leds","display","timerenable","timercurrent",
+	"clks","leds","display7seg","timerenable","timercurrent",
 	"timermax","diskcmd","disksector","diskbuffer","diskstatus",
 	"reserved","reserved","monitoraddr","monitordata","monitorcmd"
 };
 
+
+void printd(int verbosity, char* format, ...) {
+	va_list argp;
+	va_start(argp, format);
+	if (verbosity <= VERBOSITY) vprintf(format, argp);
+}
 
 void strip(char* in) {
 	for (char* p = in; *p != '\0'; p++) {
@@ -39,24 +45,51 @@ void strip(char* in) {
 	}
 }
 
+void delete_file_contents(FILE** f) {
+#ifdef _WIN32 // :clown:
+	//_chsize(_fileno(f), 0);
+#else
+	ftruncate(fileno(f), 0);
+#endif
+}
 
 long get_file_size(FILE *f) {
+#ifdef _WIN32
+	// idk why the other implementation doesnt work on windows
+	long fsize = 0;
+	int lines = 0;
+	char tmp;
+	for (tmp=getc(f); tmp!=EOF; tmp=getc(f)) {
+		//printf("char is %c\n", tmp);
+		fsize++;
+		if (tmp == '\n') lines++;
+	}
+	//printf("total counted %d and lines %d\n", (int)fsize, lines);
+	rewind(f);
+	return fsize;
+#else
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
 	return fsize;
+#endif
 }
 
 char* get_file_str(char* path) {
 	FILE* f;
 	long fsize;
 	char* s;
+	char c;
 	int i;
 
 	if ((f = fopen(path, "r"))==NULL) throw_error(ERROR_FILE_ACCESS, path);
 	fsize = get_file_size(f);
 	s = malloc(fsize + 1);
+#ifdef _WIN32 // and so help me god
+	for (i = 0, c = getc(f); c != EOF; i++, c = getc(f)) s[i] = c;
+#else
 	fread(s, 1, fsize, f);
+#endif
 	fclose(f);
 	s[fsize] = 0;
 	return s;
@@ -114,8 +147,8 @@ bool hex_to_unsigned_int(char* in, unsigned int* out) {
 	for (; *p != '\0' && *p != '\r'; p++) {
 		*out <<= 4;
 		if (*p >= '0' && *p <= '9') *out += (*p) - ((unsigned int)'0');
-		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((unsigned int)'A');
-		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned int)'a');
+		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((unsigned int)'A') + 10;
+		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((unsigned int)'a') + 10;
 		else return 1;
 	}
 }
@@ -138,8 +171,8 @@ bool hex_to_uint32(char* in, uint32* out) {
 	for (; *p != '\0' && *p != '\r'; p++) {
 		*out <<= 4;
 		if (*p >= '0' && *p <= '9') *out += (*p) - ((uint32)'0');
-		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((uint32)'A');
-		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((uint32)'a');
+		else if (*p >= 'A' && *p <= 'F') *out += (*p) - ((uint32)'A') + 10;
+		else if (*p >= 'a' && *p <= 'f') *out += (*p) - ((uint32)'a') + 10;
 		else return 1;
 	}
 }
@@ -160,7 +193,7 @@ char* unsigned_long_long_to_hex(unsigned long long number) {
 		//printf("result is %s\n", result);
 	}
 	//printf("%llu\t%d, %s <-> ", number, i, result);
-	result[hex_count]=0;
+	//result[hex_count]=0;
 	return result;
 }
 
@@ -219,7 +252,7 @@ bool char_to_unsigned_int(char* in, unsigned int* out) {
 	if (p[0] != 0 && p[1] != 0 && (p[1] == 'x' || p[1] == 'X') ) {
 		// hex
 		p += 2; // skip 0x
-		hex_to_unsigned_int(in, out);
+		hex_to_unsigned_int(p, out);
 	} else {
 		// dec
 		if (*p=='-') {
@@ -262,6 +295,7 @@ int split(char* s, char del, char*** out) {
 		if (s[i]==del || s[i]==0) {
 			(*out)[out_pos] = malloc((i-last_del)*sizeof(char));
 			(*out)[out_pos][i-(last_del+1)] = 0;
+
 			for (j=i-1; j>last_del; j--) (*out)[out_pos][j-(last_del+1)] = s[j];
 			out_pos++;
 			last_del = i;
@@ -383,7 +417,7 @@ int atoi_custom(char* in) {
 		val *= 10;
 	}
 	val /= 10;
-	printf("got val %d\n", val);
+	printd(VERBOSITY_MAX, "got val %d\n", val);
 	//exit(0);
 	return val;
 }

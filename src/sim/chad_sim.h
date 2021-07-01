@@ -1,11 +1,22 @@
 #ifndef H_CHAD_SIM
 #define H_CHAD_SIM
 
-#include <chad_utils.h>
+#include "chad_utils.h"
 
+// 128 sectors, 512 bytes per sector = 4096 bits
+#define DISK_SECTOR_COUNT				128
+#define DISK_SECTOR_SIZE_BYTES			512
+#define DISK_FILE_ROW_LENGTH			32
+#define DISK_SECTOR_SIZE_BITS			SECTOR_SIZE_BYTES*8
+#define DISK_FILE_ROW_BITS				DISK_FILE_ROW_LENGTH*4
+#define DISK_FILE_ROW_BYTES				(int)(DISK_FILE_ROW_BITS/8)
+#define DISK_FILE_ROWS_PER_SECTOR		(int)(DISK_SECTOR_SIZE_BYTES/DISK_FILE_ROW_BYTES)
+#define DISK_FILE_MAX_ROWS				DISK_FILE_ROWS_PER_SECTOR*DISK_SECTOR_COUNT
+// disk is of type uint32 (DISK_FILE_ROW_BITS==32)
+// per sector (4096 bits) we have 128 of those
 #define SIZE_HDD_SECTORS_H		128
 #define SIZE_HDD_SECTORS_W		128
-#define SIZE_HDD_SECTOR_CELL		32
+#define SIZE_HDD_SECTOR_CELL	4
 
 #define SIZE_MONITOR_H			256
 #define SIZE_MONITOR_W			256

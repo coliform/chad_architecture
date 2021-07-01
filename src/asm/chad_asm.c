@@ -4,14 +4,14 @@
 *
 */
 
-#include <chad_asm.h>
+#include "chad_asm.h"
 
 char *path_imem, *path_dmem;
 
 
 bool immediate_to_int(char* in, unsigned int* out, label* labels, int labels_count) {
 	int i, pos, len, label_len;
-	if ((in[0] >= '0' && in[0] <= '9') || in[0]=='-') return char_to_unsigned_int(in, out);
+	if ((in[0] >= '0' && in[0] <= '9') || in[0]=='-' || (in[0]=='0'&&(in[1]=='x'||in[1]=='X'))) return char_to_unsigned_int(in, out);
 	len = strlen(in);
 
 	for (i=0; i<labels_count; i++) {
@@ -21,7 +21,7 @@ bool immediate_to_int(char* in, unsigned int* out, label* labels, int labels_cou
 			if (labels[i].name[pos] != in[pos]) pos=label_len+10;
 		}
 		if (pos==label_len) {
-			printf("identilabel %s\n", in);
+			printd(VERBOSITY_MAX, "identilabel %s\n", in);
 			*out = labels[i].pointer;
 			return 0;
 		}
@@ -70,13 +70,13 @@ bool is_dotword(char* line) {
 }
 
 void sanitize_line(char* line) {
-	char* new, *p;
+	char* p_new, *p;
 	int i, len, new_len;
 	bool saw_space;
 	
 	len = strlen(line);
 	p = line;
-	new = malloc(len*sizeof(char));
+	p_new = malloc(len*sizeof(char));
 	
 	saw_space = true; // remove spaces in the beginning too
 	new_len=0;
@@ -88,7 +88,7 @@ void sanitize_line(char* line) {
 		} else if (*p==' '||*p=='\t') {
 			*p=' '; //replace tab with space
 			if (!saw_space) {
-				new[new_len]=' ';
+				p_new[new_len]=' ';
 				new_len++;
 			}
 			saw_space = true;
@@ -96,12 +96,12 @@ void sanitize_line(char* line) {
 			continue;
 		} else {
 			saw_space = false;
-			new[new_len]=*p;
+			p_new[new_len]=*p;
 			new_len++;
 		}
 	}
 	
-	for (i=0; i<new_len; i++) line[i]=new[i];
+	for (i=0; i<new_len; i++) line[i]=p_new[i];
 	line[new_len]=0;
 	if (line[new_len-1]==' ') line[new_len-1]=0;
 }
@@ -145,6 +145,7 @@ int compile(char** lines, char** lines_memory) {
 	int i;
 	int pc, len, labels_c, dotwords_c, address_int, value_int, len_lines;
 	char *immediate1, *immediate2, *rt, *rd, *rs, *value, *address, *opcode;
+	char* tmp;
 	char* line;
 	char** p;
 	unsigned int* memory_initial = memtext_to_uint_arr(lines_memory);
@@ -155,7 +156,8 @@ int compile(char** lines, char** lines_memory) {
 	for (i=0; lines_memory[i]!=0; i++) dotwords[i]=memory_initial[i];
 
 	for (p=lines; *p!=0; p++);
-	len_lines=(int)(p-lines)-1;
+	len_lines = (int)(p - lines);
+	if (len_lines > 1 && strlen(*(p-1)) == 0) len_lines--;
 
 
 	labels_c = 0;
@@ -183,6 +185,9 @@ int compile(char** lines, char** lines_memory) {
 			free(address);
 			free(value);
 			dotwords_c++;
+		}
+		else if (line[0] == 0) {
+			continue;
 		} else {
 			pc++;
 		}
@@ -193,7 +198,7 @@ int compile(char** lines, char** lines_memory) {
 		line = lines[i];
 		len = strlen(line);
 		if (!len) continue;
-		debug_print("Performing:\t'%s'\n", line);
+		printd(VERBOSITY_HIGH, "Performing:\t'%s'\n", line);
 		if (is_label(line)) {
 			continue;
 		} else if (is_dotword(line)) {
@@ -217,7 +222,7 @@ int compile(char** lines, char** lines_memory) {
 				instructions[pc].rs == -1 || instructions[pc].opcode == -1 ||
 				immediate_to_int(immediate2, &instructions[pc].immediate2, labels, labels_c) ||
 				immediate_to_int(immediate1, &instructions[pc].immediate1, labels, labels_c)) throw_error(ERROR_COMPILE_TIME, line);
-			printf("we haveaaa %d\n", instructions[pc].immediate2);
+			printd(VERBOSITY_MAX, "we haveaaa %d\n", instructions[pc].immediate2);
 			free(immediate2);
 			free(immediate1);
 			free(rt);
@@ -230,10 +235,12 @@ int compile(char** lines, char** lines_memory) {
 
 	if ((fptr = fopen(path_dmem, "w"))==NULL) return ERROR_FILE_ACCESS;
 	for (i = 0; i < MAX_DMEM_ITEMS; i++) {
-		if (dotwords[i]==0) fprintf(fptr, "000000000000\n");
+		if (dotwords[i]==0) fprintf(fptr, "00000000\n");
 		else {
-			printf("we are at %d with %d and %s\n", i, dotwords[i], unsigned_int_to_hex(dotwords[i]));
-			fprintf(fptr, "%s\n", unsigned_int_to_hex(dotwords[i]));
+			//printf("we are at %d with %d and %s\n", i, dotwords[i], unsigned_int_to_hex(dotwords[i]));
+			tmp = unsigned_int_to_hex(dotwords[i]);
+			fprintf(fptr, "%s\n", tmp+4); // we don't want the first 4
+			free(tmp);
 		}
 	}
 	fclose(fptr);
@@ -272,6 +279,7 @@ int main(int argc, char *argv[]) {
 		return 1;*/
 	}
 
+	printf("Reading assembly file...\n");
 	count_program = get_file_lines(argv[1], &lines_program);
 	if (argc == 4) {
 		path_imem = argv[2];
@@ -283,9 +291,13 @@ int main(int argc, char *argv[]) {
 	//if (argc==3) count_mem = get_file_lines(argv[2], &lines_mem);
 	count_mem = split("", '\n', &lines_mem);
 
+	printf("Compiling...\n");
 	compile(lines_program, lines_mem);
 
+	printf("Cleaning up...\n");
 	free_lines(lines_program);
 	free_lines(lines_mem);
+
+	printf("Done. Goodbye!\n");
 	return 0;
 }

@@ -4,7 +4,7 @@
 *
 */
 
-#include <chad_sim.h>
+#include "chad_sim.h"
 
 
 char **imemin_text, **dmemin_text, **diskin_text, **irq2in_text;
@@ -36,13 +36,13 @@ int irq1_i;
 #if DEBUG==1
 char* opcode_names[COUNT_OPCODES]={"add", "sub", "and", "or", "sll", "sra", "srl", "beq", "bne", "blt", "bgt", "ble", "bge", "jal", "lw", "sw", "reti", "in", "out", "halt"};
 char* register_names[COUNT_REGISTERS]={"zero", "imm1", "imm2", "v0", "a0", "a1", "a2", "t0", "t1", "t2", "s0", "s1", "s2", "gp", "sp", "ra"};
-char* ioregister_names[COUNT_IOREGISTERS]={"irq0enable", "irq1enable", "irq2enable", "irq0status", "irq1status", "irq2status", "irqhandler", "irqreturn", "clks", "leds", "display", "timerenable", "timercurrent", "timermax", "diskcmd", "disksector", "diskbuffer", "diskstatus", "reserved", "reserved", "monitoraddr", "monitordata", "monitorcmd"};
+char* ioregister_names[COUNT_IOREGISTERS]={"irq0enable", "irq1enable", "irq2enable", "irq0status", "irq1status", "irq2status", "irqhandler", "irqreturn", "clks", "leds", "display7seg", "timerenable", "timercurrent", "timermax", "diskcmd", "disksector", "diskbuffer", "diskstatus", "reserved", "reserved", "monitoraddr", "monitordata", "monitorcmd"};
 
 void print_registers() {
 	int i;
 	
 	for (i = 0; i < COUNT_REGISTERS; i++) {
-		printf("%s=%d, ", register_names[i], R[i]);
+		printd("%s=%d, ", register_names[i], R[i]);
 	}
 	printf("\r\n");
 }
@@ -102,6 +102,7 @@ void write_display7seg() {
 	char* hex;
 	hex = llu_to_hex_low((llu)IORegister[display], 8);
 	fprintf(f_display7seg, "%d %s\n", IORegister[clks], hex);
+	printd(VERBOSITY_MAX, "wrote %d %s to display7seg\n", IORegister[clks], hex);
 	free(hex);
 }
 
@@ -148,8 +149,8 @@ void write_diskout() {
 }
 
 void except(const char* details) {
-	printf("Simulator crashed. PC=%d\n", pc);
-	printf("%s\n", details);
+	printd(VERBOSITY_MIN, "Simulator crashed. PC=%d\n", pc);
+	printd(VERBOSITY_MIN, "%s\n", details);
 	fclose(f_trace);
 	exit(1);
 }
@@ -177,7 +178,7 @@ void parse_instruction(char* line, int index) {
 	instructions[index].immediate1 |= (sign1 >> 11) << 31;
 	instructions[index].immediate2 &= (~sign2);
 	instructions[index].immediate2 |= (sign2 >> 11) << 31;*/
-			printf("ins.rd = %x\n", (unsigned int)((binary>>36)&0xF));
+	printd(VERBOSITY_MAX, "ins.rd = %x\n", (unsigned int)((binary>>36)&0xF));
 }
 
 void read_instructions(char** lines) {
@@ -185,7 +186,7 @@ void read_instructions(char** lines) {
 	for (i=0, counted=0; lines[i]!=0; i++) {
 		if (strlen(lines[i])==0) continue;
 		parse_instruction(lines[i], counted);
-		printf("%s, -> (%d)\t%s %d %d %d %d %d\n", lines[i], counted, opcode_names[instructions[counted].opcode], instructions[counted].rd, instructions[counted].rs, instructions[counted].rt, instructions[counted].immediate1, instructions[counted].immediate2);
+		printd(VERBOSITY_HIGH, "%s, -> (%d)\t%s %d %d %d %d %d\n", lines[i], counted, opcode_names[instructions[counted].opcode], instructions[counted].rd, instructions[counted].rs, instructions[counted].rt, instructions[counted].immediate1, instructions[counted].immediate2);
 		counted++;
 		//if (counted >= 5) exit(0);
 	}
@@ -197,21 +198,29 @@ void parse_disk_sector(char* line, int sector_number, int sector_cell) {
 }
 
 void read_disk(char** lines) {
-	int i, counted, sector_number, sector_cell;
+	int i, j, counted, sector_number, sector_cell;
+	sector_number = 0;
+	sector_cell = 0;
+	for (i=0; i < SIZE_HDD_SECTORS_H; i++) {
+		for (j=0; j < SIZE_HDD_SECTORS_W; j++) {
+			disk[i][j] = 0;
+		}
+	}
 	for (i=0, counted=0; lines[i]!=0; i++) {
 		if (strlen(lines[i])==0) continue;
 		if (sector_cell == SIZE_HDD_SECTORS_W) {
 			sector_cell = 0;
 			sector_number++;
 		}
-		if (sector_number == SIZE_HDD_SECTORS_H) {
+		if (counted > DISK_FILE_MAX_ROWS) {
 			except("DISK TOO LARGE");
 		}
 		
 		parse_disk_sector(lines[i], sector_number, sector_cell);
 		counted++;
+		sector_cell++;
 	}
-	sector_count = counted;
+	sector_count = sector_number;
 }
 
 void read_dmemin(char** lines) {
@@ -249,7 +258,7 @@ void read_irq2in(char** lines) {
 	}
 	
 	for (i=0; i<counted; i++) {
-		printf("%d\n", irq2in_feed[i]);
+		printd(VERBOSITY_MAX, "%d\n", irq2in_feed[i]);
 	}
 	//exit(0);
 }
@@ -265,7 +274,7 @@ void write_leds() {
 void print_monitor_to_file() {
 	int i;
 	char* hex;
-	f_monitor=freopen(NULL,"w",f_monitor);
+	//delete_file_contents(f_monitor);
 	for (i=0; i<SIZE_MONITOR; i++) {
 		hex = llu_to_hex((llu)monitor[i], 2);
 		fprintf(f_monitor, "%s\n", hex);
@@ -274,7 +283,7 @@ void print_monitor_to_file() {
 }
 
 void print_monitor_to_file_yuv() {
-	f_monitoryuv=freopen(NULL,"wb",f_monitoryuv);
+	delete_file_contents(f_monitoryuv);
 	// APPARENTLY FWRITE IS BUILT DIFFERENTLY THAN FPRINTF LOL
 	fwrite(&monitor, sizeof(uint8), SIZE_MONITOR, f_monitoryuv);
 }
@@ -285,8 +294,6 @@ void write_monitor() {
 	addr = IORegister[monitoraddr];
 	data = IORegister[monitordata];
 	monitor[addr] = data;
-	print_monitor_to_file();
-	print_monitor_to_file_yuv();
 }
 
 // register_write:
@@ -310,7 +317,7 @@ void memory_write(int number, uint32 value) {
 }
 
 uint32 memory_read(int number) {
-	printf("memory read at %d is %d\n", number, MEM[number]);
+	printd(VERBOSITY_MAX, "memory read at %d is %d\n", number, MEM[number]);
 	if (number < 0 || number >= MAX_DMEM_ITEMS) except("EXCEPTION IN MEMORY READ, INVALID MEMORY ADDRESS");
 	return MEM[number];
 }
@@ -336,15 +343,15 @@ void DMA_write() {
 	// 128 runs in total, idk why 1024
 	if (IORegister[diskcmd]!=2) return; // verifies write command
 	if (sector_head <= SIZE_HDD_SECTORS_W) {
-		disk[disksector][sector_head] = MEM[diskbuffer+sector_head];
+		disk[IORegister[disksector]][sector_head] = MEM[IORegister[diskbuffer]+sector_head];
 	}
 }
 
 void DMA_read() {
 	// disk -> MEM
-	if (IORegister[diskcmd]!=1) return; // verifies write command
+	if (IORegister[diskcmd]!=1) return; // verifies read command
 	if (sector_head <= SIZE_HDD_SECTORS_W) {
-		MEM[diskbuffer+sector_head] = disk[disksector][sector_head];
+		MEM[IORegister[diskbuffer]+sector_head] = disk[IORegister[disksector]][sector_head];
 	}
 }
 
@@ -395,7 +402,8 @@ void ioregister_write(int number, uint32 value) {
 			break;
 		case diskcmd:
 			// don't assign automatically here
-			assign_disk_cmd(IORegister[number]);
+			// TODO: WHY NOT?
+			assign_disk_cmd(value);
 			break;
 		default:
 			IORegister[number] = value & IORegister_SIZE_OUT[number];
@@ -482,7 +490,7 @@ void bge(int rd, int rs, int rt) {
 
 void jal(int rd, int rs, int rt) {
 	register_write(ra, pc+1);
-	printf("set pc from jal to %d\n",register_read(rd));
+	printd(VERBOSITY_MAX, "set pc from jal to %d\n",register_read(rd));
 	set_pc(register_read(rd));
 //	printf("instruction there is %s\n", opcode_names[instructions[pc].opcode]);
 }
@@ -536,7 +544,7 @@ void perform_current_instruction() {
 	R[imm1] = ins.immediate1;
 	R[imm2] = ins.immediate2;
 	write_trace();
-	printf("%s $%s, $%s, $%s, %d, %d\n", opcode_names[instructions[pc].opcode], register_names[instructions[pc].rd], register_names[instructions[pc].rs], register_names[instructions[pc].rt], instructions[pc].immediate1, instructions[pc].immediate2);
+	printd(VERBOSITY_HIGH, "%s $%s, $%s, $%s, %d, %d\n", opcode_names[instructions[pc].opcode], register_names[instructions[pc].rd], register_names[instructions[pc].rs], register_names[instructions[pc].rt], instructions[pc].immediate1, instructions[pc].immediate2);
 	(*opcode_fn[ins.opcode])(ins.rd, ins.rs, ins.rt);
 	pc++;
 }
@@ -565,12 +573,13 @@ void check_interrupt_1() {
 	if (IORegister[diskstatus]==1) {
 		switch (IORegister[diskcmd]) {
 			case 1:
-				DMA_write();
-				break;
-			case 2:
 				DMA_read();
 				break;
-			default: break;
+			case 2:
+				DMA_write();
+				break;
+			default:
+				break;
 		}
 		sector_head++;
 		
@@ -603,7 +612,7 @@ void check_interrupt_2() {
 	irq2 = IORegister[irq2enable] & IORegister[irq2status];
 	irq |= irq2;
 	if (irq2) {
-		printf("caught irq2\n");
+		printd(VERBOSITY_MAX, "caught irq2\n");
 		//exit(0);
 	}
 }
@@ -613,12 +622,12 @@ void check_interrupts() {
 	check_interrupt_0();
 	check_interrupt_1();
 	check_interrupt_2();
-	printf("%d %d %d\n", irq0, irq1, irq2);
+	printd(VERBOSITY_MAX, "%d %d %d\n", irq0, irq1, irq2);
 	if (irq == 1) {
 		if (irq_routine) {
 			return;
 		} else {
-			printf("triggered irq\n");
+			printd(VERBOSITY_MAX, "triggered irq\n");
 			irq_routine = 1;
 			IORegister[irqreturn] = pc;
 			pc = IORegister[irqhandler];
@@ -641,7 +650,8 @@ void perform_instruction_loop() {
 		check_interrupts();
 		perform_current_instruction();
 		clock_tick();
-		//if (IORegister[clks] >= 10) exit(0);
+		//printf("Currently in clock %d\n", IORegister[clks]);
+		//if (IORegister[clks] >= 500) exit(0);
 		//print_registers();
 		//printf("Cycle %d, ", IORegister[clks]-1);
 		//press_enter();
@@ -651,22 +661,18 @@ void perform_instruction_loop() {
 	write_registers();
 	write_dmemout();
 	write_diskout();
+	print_monitor_to_file();
+	print_monitor_to_file_yuv();
 }
 
 
 int main(int argc, char *argv[]) {
-	// %s <imemin.txt> <dmemin.txt> <diskin.txt> <irq2in.txt>
 	int i;
-	
-/*	llu fifi;
-	hex_to_unsigned_long_long("0E4020000040", &fifi);
-	printf("%llu\n", fifi);
-	fifi = 0;
-	fifi 
-	exit(0);*/
 	
 	if (argc != 15) throw_error(ERROR_PARAMETERS_SIM, argv[0]); // god help me
 	
+	printf("Reading files...\n");
+
 	get_file_lines(argv[1], &imemin_text);
 	read_instructions(imemin_text);
 	
@@ -678,7 +684,9 @@ int main(int argc, char *argv[]) {
 	
 	get_file_lines(argv[4], &irq2in_text);
 	read_irq2in(irq2in_text);
-	
+
+
+	printf("Getting file handles...\n");
 
 	if ((f_dmemout = fopen(argv[5], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[5]);
 	if ((f_regout = fopen(argv[6], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[6]);
@@ -691,10 +699,10 @@ int main(int argc, char *argv[]) {
 	if ((f_monitor = fopen(argv[13], "w"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[13]);
 	if ((f_monitoryuv = fopen(argv[14], "wb"))==NULL) throw_error(ERROR_FILE_ACCESS, argv[14]);
 	
-	//fprintf(f_trace, "PC	INST	R0	R1	R2	R3	R4	R5	R6	R7	R8	R9	R10	R11	R12	R13	R14	R15\n");
-	
+	printf("Performing instructions...\n");
 	perform_instruction_loop();
 	
+	printf("Cleaning up...\n");
 	fclose(f_dmemout);
 	fclose(f_regout);
 	fclose(f_trace);
@@ -710,5 +718,7 @@ int main(int argc, char *argv[]) {
 	free_lines(dmemin_text);
 	free_lines(diskin_text);
 	free_lines(irq2in_text);
+
+	printf("Done. Goodbye!\n");
 	return 0;
 }

@@ -1,7 +1,7 @@
 #ifndef H_CHAD_ASM
 #define H_CHAD_ASM
 
-#include <chad_utils.h>
+#include "chad_utils.h"
 
 /*
 *
@@ -9,7 +9,7 @@
 *
 */
 
-#include <chad_asm.h>
+#include "chad_asm.h"
 
 
 bool immediate_to_int(char* in, unsigned int* out, label* labels, int labels_count);

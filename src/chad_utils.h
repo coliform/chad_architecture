@@ -1,18 +1,37 @@
 #ifndef H_CHAD_UTILS
 #define H_CHAD_UTILS
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #define DEBUG 1
 
+#define VERBOSITY_MAX		10
+#define VERBOSITY_HIGH		8
+#define VERBOSITY_MEDIUM	5
+#define VERBOSITY_MIN		0
+
+#define VERBOSITY VERBOSITY_MIN
 
 
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 typedef bool			uint1;
 typedef unsigned char		uint2;
 typedef unsigned char		uint4;
+#ifdef _WIN32
+#include <stdint.h>
+typedef uint8_t		uint7;
+typedef uint8_t		uint8;
+typedef uint16_t		uint12;
+typedef uint16_t		uint16;
+typedef uint16_t		uint16;
+typedef uint32_t		uint32;
+typedef uint64_t		uint64;
+#else
 typedef u_int8_t		uint7;
 typedef u_int8_t		uint8;
 typedef u_int16_t		uint12;
@@ -20,6 +39,8 @@ typedef u_int16_t		uint16;
 typedef u_int16_t		uint16;
 typedef u_int32_t		uint32;
 typedef u_int64_t		uint64;
+#endif
+
 typedef unsigned long long	llu;
 
 #define ERROR			1
@@ -81,6 +102,7 @@ unsigned long HASH_OPCODES[COUNT_OPCODES];
 unsigned long HASH_REGISTERS[COUNT_REGISTERS];
 unsigned long HASH_IOREGISTERS[COUNT_IOREGISTERS];
 
+void printd(int verbosity, char* format, ...);
 void throw_error(const int reason, const char* details);
 void strip(char* in);
 bool is_whitespace(char c);
@@ -98,6 +120,7 @@ int split(char* s, char del, char*** result);
 void free_lines(char** lines);
 void pop_char(char* line, int index);
 unsigned int* memtext_to_uint_arr(char** lines);
+void delete_file_contents(FILE* f);
 long get_file_size(FILE *f);
 char* get_file_str(char* path);
 int get_file_lines(char* path, char*** lines);
